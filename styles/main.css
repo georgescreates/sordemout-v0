@@ -1,0 +1,13 @@
+@tailwind base;
+
+/* Add default styles here */
+@layer base {
+    body {
+        @apply text-lochmara-950;
+    }
+}
+
+@tailwind components;
+
+
+@tailwind utilities;

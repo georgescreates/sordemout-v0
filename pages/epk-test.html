@@ -1,0 +1,31 @@
+<!-- test-api.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <script>
+        fetch('https://cors-anywhere.herokuapp.com/https://api.extract.pics/v0/extractions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer 0eotRRMZyW9p4dyJrfKMzKUZQEv0qpOUTRgdX6xtSb`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: 'https://pin.it/5OKfCsNOL'
+            })
+        })
+        .then(response => {
+            console.log('Status:', response.status);
+            return response.text();
+        })
+        .then(text => {
+            console.log('Response:', text);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    </script>
+</body>
+</html>
