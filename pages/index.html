@@ -54,83 +54,88 @@
         <div class="max-w-7xl mx-auto ">
             <div class="flex flex-col md:flex-row flex-1 gap-10">
                 <!-- Left Column -->
-                <div class="w-full md:w-[60%] gap-y-2">
-                    <h2>
-                        <span class="text-sm text-gray-500">Step 1/2:</span>
-                        <span class="block text-2xl font-bold">Browse Files or Paste Link</span>
-                    </h2>
-                    <form class="my-4">
-                        <input type="file" class="hidden" id="file-input" multiple accept="image/png,image/jpeg,image/jpg">
-                        <div class="rounded-sm border-2 border-silver-chalice-300 border-dashed p-8 h-[525px] my-4 flex flex-col items-center justify-center gap-2" id="drop-zone">
-                            <!-- File restrictions text -->
-                            <div class="text-silver-chalice-400 text-center">
-                                <p>Supported files: <span class="font-bold text-lochmara-950 ">png, jpg, jpeg</span></p>
-                                <p>Maximum file size: <span class="font-bold text-lochmara-950 text-center">5MB</span></p>
-                            </div>
-                            <!-- Browse button -->
-                             <div class="flex gap-x-4 items-center mt-4">
-                                <button type="button" class="px-5 py-3 bg-lochmara-600 text-white rounded hover:bg-lochmara-800 font-medium" id="browse-btn">
-                                    Browse Files
-                                </button>
-                                <p class="text-silver-chalice-400 font-medium">or drag and drop here ...</p>
-                             </div>
-                            <!-- Add after Browse Files button and "or" divider -->
-                            <!-- <div class="mt-2 text-silver-chalice-400 text-center">or</div> -->
-                        </div>
-                    </form>
-                    <div class="flex gap-2 mt-2 w-full h-auto mb-11">
-                        <div class="flex-1 relative w-full">
-                            <!-- Input container with dropdown -->
-                            <div class="relative flex items-center border border-silver-chalice-300 rounded bg-white w-full">
-                                <!-- Input field first, no border as it's handled by container -->
-                                <input type="text" 
-                                    id="link-input"
-                                    placeholder="or paste Pinterest pin link here ..." 
-                                    class="flex-1 px-5 py-3 bg-white placeholder-silver-chalice-400 focus:outline-none focus:ring-1 focus:ring-lochmara-400 focus:border-lochmara-400">
-                                
-                                <!-- Dropdown button with margins -->
-                                <div class="relative mx-2">
-                                    <button type="button" 
-                                            id="url-type-dropdown"
-                                            class="flex items-center px-3 py-1.5 font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none min-w-[120px] whitespace-nowrap">
-                                        <span id="selected-type">Pinterest Pin</span>
-                                        <svg class="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
+                <div class="w-full md:w-[60%] flex flex-col gap-y-4" id="left-section">
+                    <div class="left-section-part w-full" id="left-section-title-container">
+                        <h2>
+                            <span class="text-sm text-gray-500">Step 1/2:</span>
+                            <span class="block text-2xl font-bold">Browse Files or Paste Link</span>
+                        </h2>
+                    </div>
+                    <div class="left-section-part w-full flex flex-col" id="drop-zone-link-input-container">
+                        <form class="">
+                            <input type="file" class="hidden" id="file-input" multiple accept="image/png,image/jpeg,image/jpg">
+                            <div class="rounded-sm border-2 border-silver-chalice-300 border-dashed p-8 h-[525px] flex flex-col items-center justify-center gap-2" id="drop-zone">
+                                <!-- File restrictions text -->
+                                <div class="text-silver-chalice-400 text-center">
+                                    <p>Supported files: <span class="font-bold text-lochmara-950 ">png, jpg, jpeg</span></p>
+                                    <p>Maximum file size: <span class="font-bold text-lochmara-950 text-center">5MB</span></p>
+                                </div>
+                                <!-- Browse button -->
+                                <div class="flex gap-x-4 items-center mt-4">
+                                    <button type="button" class="px-5 py-3 bg-lochmara-600 text-white rounded hover:bg-lochmara-800 font-medium" id="browse-btn">
+                                        Browse Files
                                     </button>
-                                    <!-- Dropdown menu -->
-                                    <div id="url-type-menu" 
-                                        class="absolute right-0 z-10 hidden w-48 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
-                                        <div class="py-1">
-                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="pin">Pinterest Pin</a>
-                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="board">Pinterest Board</a>
-                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="unsplash">Unsplash</a>
-                                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="other">Other</a>
+                                    <p class="text-silver-chalice-400 font-medium">or drag and drop here ...</p>
+                                </div>
+                                <!-- Add after Browse Files button and "or" divider -->
+                                <!-- <div class="mt-2 text-silver-chalice-400 text-center">or</div> -->
+                            </div>
+                        </form>
+                        <div class="flex gap-x-2 w-full h-auto my-2">
+                            <div class="flex-1 relative w-full">
+                                <!-- Input container with dropdown -->
+                                <div class="relative flex items-center border border-silver-chalice-300 rounded bg-white w-full">
+                                    <!-- Input field first, no border as it's handled by container -->
+                                    <input type="text" 
+                                        id="link-input"
+                                        placeholder="or paste Pinterest pin link here ..." 
+                                        class="flex-1 px-5 py-3 bg-white placeholder-silver-chalice-400 focus:outline-none focus:ring-1 focus:ring-lochmara-400 focus:border-lochmara-400">
+                                    
+                                    <!-- Dropdown button with margins -->
+                                    <div class="relative mx-2">
+                                        <button type="button" 
+                                                id="url-type-dropdown"
+                                                class="flex items-center px-3 py-1.5 font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none min-w-[120px] whitespace-nowrap">
+                                            <span id="selected-type">Pinterest Pin</span>
+                                            <svg class="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
+                                        <!-- Dropdown menu -->
+                                        <div id="url-type-menu" 
+                                            class="absolute right-0 z-10 hidden w-48 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
+                                            <div class="py-1">
+                                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="pin">Pinterest Pin</a>
+                                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="board">Pinterest Board</a>
+                                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="unsplash">Unsplash</a>
+                                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="other">Other</a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Status message container -->
-                                <div class="absolute -bottom-7 left-0 h-6 w-full">
-                                    <!-- Status messages will be inserted here -->
-                                     <p id="status-text-container" class="text-sm text-silver-chalice-400 italic">Note: Due to technical limitations, only the first ~30 pins from boards will be shown.</p>
-                                </div>
                             </div>
+                            <button type="button" 
+                                    id="import-link-btn"
+                                    class="px-5 py-3 font-medium text-lochmara-600 bg-lochmara-50 border border-lochmara-300 rounded hover:bg-lochmara-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px] flex items-center justify-center">
+                                Extract
+                            </button>
                         </div>
-                        <button type="button" 
-                                id="import-link-btn"
-                                class="px-5 py-3 font-medium text-lochmara-600 bg-lochmara-50 border border-lochmara-300 rounded hover:bg-lochmara-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px] flex items-center justify-center">
-                            Extract
-                        </button>
+                        <!-- Status message container -->
+                        <div class="w-full">
+                            <!-- Status messages will be inserted here -->
+                                <p id="status-text-container" class="text-sm text-silver-chalice-400 italic">Note: Due to technical limitations, only the first ~30 pins from boards will be shown.</p>
+                        </div>
                     </div>
-                    <div class="w-full flex gap-x-8">
-                        <p class="text-silver-chalice-400 text-sm">Session upload count: <span class="font-medium text-lochmara-950" id="session-upload-count-files">00/50</span></p>
-                        <p class="text-silver-chalice-400 text-sm">Session upload usage: <span class="font-medium text-lochmara-950" id="session-upload-count-size">00MB/250MB</span></p>
+                    <div class="left-section-part w-full" id="left-section-session-stats-container">
+                        <div class="w-full flex gap-x-8">
+                            <p class="text-silver-chalice-400 text-sm">Session upload count: <span class="font-medium text-lochmara-950" id="session-upload-count-files">00/50</span></p>
+                            <p class="text-silver-chalice-400 text-sm">Session upload usage: <span class="font-medium text-lochmara-950" id="session-upload-count-size">00MB/250MB</span></p>
+                        </div>
                     </div>
                 </div>
     
                 <!-- Right Column -->
-                <div class="w-full md:w-[40%]">
+                <div class="w-full md:w-[40%]" id="right-section">
                     <h2>
                         <span class="text-sm text-gray-500">Step 2/2:</span>
                         <span class="block text-2xl font-bold">Select Files to Process</span>

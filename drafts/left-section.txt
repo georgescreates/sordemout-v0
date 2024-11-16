@@ -1,0 +1,6 @@
+<h2>
+    <span class="text-sm text-gray-500">Step 1/2:</span>
+    <span class="block text-2xl font-bold">Browse Files or Paste Link</span>
+</h2>
+
+
