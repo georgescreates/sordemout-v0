@@ -185,7 +185,7 @@ function handleFiles(files) {
     previewGrid.classList.remove('hidden');
     
     // Update grid view class based on current view
-    previewGrid.className = 'w-full h-[453px] my-2 overflow-y-auto ' + 
+    previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
         (currentView === 'list' 
             ? 'flex flex-col space-y-2' 
             : 'grid grid-cols-2 gap-4 p-2');
@@ -333,7 +333,7 @@ function toggleView(view) {
     const previewItems = previewGrid.querySelectorAll('.preview-item');
     previewItems.forEach(item => {
         if (view === 'list') {
-            previewGrid.className = 'w-full h-[453px] my-2 overflow-y-auto flex flex-col space-y-2';
+            previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
             previewItems.forEach(item => {
                 item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
                 const imgContainer = item.querySelector('div:first-child');
@@ -342,7 +342,7 @@ function toggleView(view) {
                 fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-1';
             });
         } else {
-            previewGrid.className = 'w-full h-[453px] my-2 overflow-y-auto grid grid-cols-2 gap-4 p-2';
+            previewGrid.className = 'w-full h-[536px] overflow-y-auto grid grid-cols-2 gap-4 p-2';
             previewItems.forEach(item => {
                 item.className = 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
                 const imgContainer = item.querySelector('div:first-child');
@@ -409,15 +409,16 @@ function updateQueueStats() {
 
 // Status handling functions
 function showStatus(message) {
+    const statusContainer = document.getElementById('status-text-container');
     if (!linkInputContainer) return;
     
     // Find or create the status container
-    let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
-    if (!statusContainer) {
-        statusContainer = document.createElement('div');
-        statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
-        linkInputContainer.appendChild(statusContainer);
-    }
+    // let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
+    // if (!statusContainer) {
+    //     statusContainer = document.createElement('div');
+    //     statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
+    //     linkInputContainer.appendChild(statusContainer);
+    // }
     
     const statusText = document.createElement('div');
     statusText.className = 'text-sm text-gray-600 flex items-center gap-2';
@@ -435,15 +436,16 @@ function showStatus(message) {
 }
 
 function showError(message) {
+    const statusContainer = document.getElementById('status-text-container');
     if (!linkInputContainer) return;
     
     // Find or create the status container
-    let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
-    if (!statusContainer) {
-        statusContainer = document.createElement('div');
-        statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
-        linkInputContainer.appendChild(statusContainer);
-    }
+    // let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
+    // if (!statusContainer) {
+    //     statusContainer = document.createElement('div');
+    //     statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
+    //     linkInputContainer.appendChild(statusContainer);
+    // }
     
     const errorText = document.createElement('div');
     errorText.className = 'text-sm text-red-600 flex items-center gap-2';
@@ -460,22 +462,21 @@ function showError(message) {
     
     // Remove error message after 5 seconds
     setTimeout(() => {
-        if (errorText.parentNode) {
-            errorText.remove();
-        }
+        resetStatusMessage();
     }, 5000);
 }
 
 function showSuccess(message) {
+    const statusContainer = document.getElementById('status-text-container');
     if (!linkInputContainer) return;
     
     // Find or create the status container
-    let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
-    if (!statusContainer) {
-        statusContainer = document.createElement('div');
-        statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
-        linkInputContainer.appendChild(statusContainer);
-    }
+    // let statusContainer = linkInputContainer.querySelector('.absolute.h-6');
+    // if (!statusContainer) {
+    //     statusContainer = document.createElement('div');
+    //     statusContainer.className = 'absolute -bottom-6 left-0 h-6 w-full';
+    //     linkInputContainer.appendChild(statusContainer);
+    // }
     
     const successText = document.createElement('div');
     successText.className = 'text-sm text-green-600 flex items-center gap-2';
@@ -492,18 +493,19 @@ function showSuccess(message) {
     
     // Remove success message after 3 seconds
     setTimeout(() => {
-        if (successText.parentNode) {
-            successText.remove();
-        }
+        resetStatusMessage();
     }, 3000);
 }
 
 function clearStatus() {
-    if (!linkInputContainer) return;
-    const statusContainer = linkInputContainer.querySelector('.absolute.h-6');
-    if (statusContainer) {
-        statusContainer.innerHTML = '';
-    }
+    resetStatusMessage();
+}
+
+function resetStatusMessage() {
+    const statusContainer = document.getElementById('status-text-container');
+    if (!statusContainer) return;
+    
+    statusContainer.innerText = "Note: Due to technical limitations, only the first ~30 pins from boards will be shown.";
 }
 
 // URL validation
@@ -923,7 +925,7 @@ async function handleImageUrls(urls) {
     previewGrid.innerHTML = '';
     
     // Base classes for preview grid
-    previewGrid.className = 'w-full h-[453px] my-2 overflow-y-auto ' + 
+    previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
     (currentView === 'list' 
         ? 'flex flex-col space-y-2' 
         : 'grid grid-cols-2 gap-4 p-2');
