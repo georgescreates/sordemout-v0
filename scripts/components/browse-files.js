@@ -26,6 +26,11 @@ fileInput.accept = 'image/png,image/jpeg,image/jpg';
 fileInput.style.display = 'none';
 document.body.appendChild(fileInput);
 
+// Add at the top with other constants
+let isStackMode = false;
+const stackModeContainer = document.querySelector('#stack-mode-container');
+const stackModeToggle = document.querySelector('#stack-mode-toggle');
+
 const selectAllCheckbox = document.getElementById('select-all');
 let selectedFiles = new Set(); // To track selected files
 
@@ -193,6 +198,11 @@ function handleFiles(files) {
     let totalSize = 0;
     let validFileCount = 0;
 
+    // Clear existing items ONLY if stack mode is OFF
+    if (!isStackMode) {
+        previewGrid.innerHTML = '';
+    }
+
     files.forEach(file => {
         const validation = validateFile(file);
         
@@ -201,9 +211,14 @@ function handleFiles(files) {
             totalSize += file.size;
             
             const { previewItem, progressFill, statusText } = createPreviewItem(file);
-            previewGrid.appendChild(previewItem);
             
-            // Simulate upload progress (remove this when implementing real upload)
+            // If stack mode is ON, add new items at the beginning
+            if (isStackMode) {
+                previewGrid.insertBefore(previewItem, previewGrid.firstChild);
+            } else {
+                previewGrid.appendChild(previewItem);
+            }
+            
             simulateProgress(progressFill, statusText);
         }
     });
@@ -213,17 +228,18 @@ function handleFiles(files) {
     const sessionCountSize = document.getElementById('session-upload-count-size');
     
     if (sessionCountFiles) {
-        const currentCount = parseInt(sessionCountFiles.textContent.split('/')[0]);
+        const currentCount = isStackMode ? 
+            parseInt(sessionCountFiles.textContent.split('/')[0]) : 0;
         sessionCountFiles.textContent = `${String(currentCount + validFileCount).padStart(2, '0')}/50`;
     }
     
     if (sessionCountSize) {
-        const currentSize = parseFloat(sessionCountSize.textContent.split('/')[0]);
+        const currentSize = isStackMode ? 
+            parseFloat(sessionCountSize.textContent.split('/')[0]) : 0;
         const newSize = currentSize + (totalSize / (1024 * 1024));
         sessionCountSize.textContent = `${newSize.toFixed(2)}MB/250MB`;
     }
 
-    // Update select all checkbox state
     updateSelectAllState();
 }
 
@@ -329,6 +345,7 @@ function toggleView(view) {
     if (currentView === view) return;
     currentView = view;
     updateButtonStyles();
+    updatePreviewLayout();
     
     const previewItems = previewGrid.querySelectorAll('.preview-item');
     previewItems.forEach(item => {
@@ -921,14 +938,16 @@ async function handleImageUrls(urls) {
     emptyState.classList.add('hidden');
     previewGrid.classList.remove('hidden');
     
-    // Clear existing previews
-    previewGrid.innerHTML = '';
+    // Clear grid only if stack mode is OFF
+    if (!isStackMode) {
+        previewGrid.innerHTML = '';
+    }
     
     // Base classes for preview grid
     previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
-    (currentView === 'list' 
-        ? 'flex flex-col space-y-2' 
-        : 'grid grid-cols-2 gap-4 p-2');
+        (currentView === 'list' 
+            ? 'flex flex-col space-y-2' 
+            : 'grid grid-cols-2 gap-4 p-2');
 
     for (const url of urls) {
         // Get size before creating preview
@@ -936,10 +955,10 @@ async function handleImageUrls(urls) {
         totalSize += sizeInfo.size;
 
         const preview = document.createElement('div');
+
         preview.className = currentView === 'list' 
             ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
             : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
-
         preview.setAttribute('data-preview-id', url);
 
         // Checkbox container
@@ -949,7 +968,8 @@ async function handleImageUrls(urls) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500';
-        checkbox.checked = true;
+        checkbox.checked = sizeInfo.size <= 5;
+        checkbox.disabled = sizeInfo.size > 5;
 
         checkboxContainer.appendChild(checkbox);
         preview.appendChild(checkboxContainer);
@@ -1100,34 +1120,38 @@ async function handleImageUrls(urls) {
 
         // Add to preview grid
         previewGrid.appendChild(preview);
+
+        // Add new items at the top in stack mode
+        if (isStackMode) {
+            previewGrid.insertBefore(preview, previewGrid.firstChild);
+        } else {
+            previewGrid.appendChild(preview);
+        }
     }
 
     // Update selection state
     updateSelectAllState();
 
     // Update session stats
-    updateSessionStats(urls.length, totalSize);
+    updateSessionStats(urls.length, totalSize * 1024 * 1024, isStackMode);
 }
 
 // Add function to update session stats
-function updateSessionStats(fileCount, totalSize) {
+function updateSessionStats(newFileCount, newSizeBytes, shouldAccumulate) {
     const sessionCountFiles = document.getElementById('session-upload-count-files');
     const sessionCountSize = document.getElementById('session-upload-count-size');
-
+    
     if (sessionCountFiles) {
-        sessionCountFiles.textContent = `${String(fileCount).padStart(2, '0')}/50`; // Adjust limit as needed
+        const currentCount = shouldAccumulate ? 
+            parseInt(sessionCountFiles.textContent.split('/')[0]) : 0;
+        sessionCountFiles.textContent = `${String(currentCount + newFileCount).padStart(2, '0')}/50`;
     }
-
+    
     if (sessionCountSize) {
-        sessionCountSize.textContent = `${totalSize.toFixed(2)}MB/250MB`; // Adjust limit as needed
-    }
-
-    // Optional: Check limits and show warnings
-    if (totalSize > 250) { // 250MB limit
-        showError('Total size exceeds session limit');
-    }
-    if (fileCount > 50) { // 50 files limit
-        showError('File count exceeds session limit');
+        const currentSize = shouldAccumulate ? 
+            parseFloat(sessionCountSize.textContent.split('/')[0]) : 0;
+        const newSize = currentSize + (newSizeBytes / (1024 * 1024));
+        sessionCountSize.textContent = `${newSize.toFixed(2)}MB/250MB`;
     }
 }
 
@@ -1181,3 +1205,58 @@ importButton.addEventListener('click', () => {
         extractImagesFromLink(url);
     }
 });
+
+//Toggling Stack mode and features
+
+// Add the event listener for the toggle
+stackModeContainer.addEventListener('click', (e) => {
+    e.stopPropagation();
+    stackModeToggle.checked = !stackModeToggle.checked;
+    isStackMode = stackModeToggle.checked;
+    console.log('clicked', isStackMode);
+    
+    // Update toggle appearance
+    if (isStackMode) {
+        stackModeToggle.nextElementSibling.classList.add('bg-lochmara-600');
+    } else {
+        stackModeToggle.nextElementSibling.classList.remove('bg-lochmara-600');
+    }
+});
+
+// Add this new function
+function updatePreviewLayout() {
+    const previewGrid = document.getElementById('preview-grid');
+    const previewItems = previewGrid.querySelectorAll('.preview-item');
+    
+    if (isStackMode) {
+        previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col items-center gap-4 p-2';
+        previewItems.forEach(item => {
+            item.className = 'preview-item w-full max-w-md bg-white rounded-sm overflow-hidden relative';
+            const imgContainer = item.querySelector('div:first-child');
+            imgContainer.className = 'w-full aspect-video';
+            const fileInfo = item.querySelector('div:nth-child(2)');
+            fileInfo.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-1';
+        });
+    } else {
+        // Revert to current view (list or grid)
+        if (currentView === 'list') {
+            previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
+            previewItems.forEach(item => {
+                item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
+                const imgContainer = item.querySelector('div:first-child');
+                imgContainer.className = 'h-20 w-20 flex-shrink-0';
+                const fileInfo = item.querySelector('div:nth-child(2)');
+                fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-1';
+            });
+        } else {
+            previewGrid.className = 'w-full h-[536px] overflow-y-auto grid grid-cols-2 gap-4 p-2';
+            previewItems.forEach(item => {
+                item.className = 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
+                const imgContainer = item.querySelector('div:first-child');
+                imgContainer.className = 'w-full h-full';
+                const fileInfo = item.querySelector('div:nth-child(2)');
+                fileInfo.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-1';
+            });
+        }
+    }
+}

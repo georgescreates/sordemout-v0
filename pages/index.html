@@ -160,9 +160,20 @@
                             </div>
 
                             <!-- Right side: Select All -->
-                            <div class="flex items-center gap-x-2">
-                                <input type="checkbox" id="select-all" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                                <label for="select-all" class="text-sm text-gray-700">Select All</label>
+                            <div class="flex items-center gap-x-4">
+                                <div class="flex items-center gap-x-2">
+                                    <input type="checkbox" id="select-all" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                    <label for="select-all" class="text-sm text-gray-700">Select All</label>
+                                </div>
+                                <div class="flex items-center gap-x-2">
+                                    
+                                    <div id="stack-mode-container" class="relative inline-flex items-center gap-x-2 cursor-pointer">
+                                        <input type="checkbox" id="stack-mode-toggle" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-silver-chalice-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lochmara-500"></div>
+                                        <label for="stack-mode-toggle" class="text-sm text-gray-700">Stack Mode</label>
+                                    </div>
+                                    
+                                </div>
                             </div>
                         </div>
                     </div>
