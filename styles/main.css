@@ -5,6 +5,10 @@
     body {
         @apply text-lochmara-950;
     }
+
+    .opacity-0 {
+        opacity: 0;
+    }
 }
 
 @tailwind components;

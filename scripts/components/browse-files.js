@@ -26,6 +26,12 @@ fileInput.accept = 'image/png,image/jpeg,image/jpg';
 fileInput.style.display = 'none';
 document.body.appendChild(fileInput);
 
+const processButton = document.querySelector('#upl-client-firebase-btn');
+if (processButton) {
+    processButton.disabled = true;
+    processButton.classList.add('cursor-not-allowed', 'opacity-50');
+ }
+
 // Add at the top with other constants
 let isStackMode = false;
 const stackModeContainer = document.querySelector('#stack-mode-container');
@@ -95,6 +101,10 @@ function validateFile(file) {
 // Function to create preview item
 function createPreviewItem(file) {
     const previewItem = document.createElement('div');
+
+    // Store the actual file size as a data attribute
+    previewItem.setAttribute('data-file-size', file.size);
+
     previewItem.className = currentView === 'list' 
         ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
         : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
@@ -140,6 +150,7 @@ function createPreviewItem(file) {
     const progressFill = document.createElement('div');
     progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
     progressFill.style.width = '0%';
+    progressFill.setAttribute('data-status', 'uploading');
 
     const statusContainer = document.createElement('div');
     statusContainer.className = 'flex items-center justify-between text-xs';
@@ -147,8 +158,7 @@ function createPreviewItem(file) {
     const statusText = document.createElement('span');
     statusText.className = 'status-text ' + 
         (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
-    statusText.textContent = 'ready';
-
+    
     const fileSize = document.createElement('span');
     fileSize.className = 'text-xs ' + 
         (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
@@ -160,6 +170,9 @@ function createPreviewItem(file) {
     fileHeader.innerHTML = `
         <p class="text-sm truncate">${file.name}</p>
     `;
+
+    // Set initial status with check icon
+    setReadyStatus(statusText);
 
     // Assemble all elements
     checkboxContainer.appendChild(checkbox);
@@ -179,17 +192,35 @@ function createPreviewItem(file) {
     previewItem.appendChild(imgContainer);
     previewItem.appendChild(fileInfo);
 
+    // Add checkbox change handler for queue stats update
+    checkbox.addEventListener('change', (e) => {
+        if (!e.target.checked) {
+            setAbortedStatus(statusText);
+            progressFill.classList.remove('bg-blue-500', 'bg-green-500');
+            progressFill.classList.add('bg-gray-400');
+            progressFill.setAttribute('data-status', 'aborted');
+        } else {
+            setReadyStatus(statusText);
+            progressFill.classList.remove('bg-gray-400');
+            progressFill.classList.add('bg-blue-500');
+            progressFill.setAttribute('data-status', 'ready');
+        }
+        updateAllStats();
+        updateProcessButtonState();
+    });
+
     return { previewItem, progressFill, statusText };
 }
 
 // Function to handle files
 function handleFiles(files) {
-    // Show preview grid and hide empty state
-    document.getElementById('empty-state').classList.add('hidden');
+    const emptyState = document.getElementById('empty-state');
     const previewGrid = document.getElementById('preview-grid');
+    
+    // Show preview grid and hide empty state
+    emptyState.classList.add('hidden');
     previewGrid.classList.remove('hidden');
     
-    // Update grid view class based on current view
     previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
         (currentView === 'list' 
             ? 'flex flex-col space-y-2' 
@@ -198,7 +229,7 @@ function handleFiles(files) {
     let totalSize = 0;
     let validFileCount = 0;
 
-    // Clear existing items ONLY if stack mode is OFF
+    // Clear existing items if stack mode is OFF
     if (!isStackMode) {
         previewGrid.innerHTML = '';
     }
@@ -220,27 +251,15 @@ function handleFiles(files) {
             }
             
             simulateProgress(progressFill, statusText);
+        } else {
+            showErrorToast(validation.error);
         }
     });
 
-    // Update session stats
-    const sessionCountFiles = document.getElementById('session-upload-count-files');
-    const sessionCountSize = document.getElementById('session-upload-count-size');
-    
-    if (sessionCountFiles) {
-        const currentCount = isStackMode ? 
-            parseInt(sessionCountFiles.textContent.split('/')[0]) : 0;
-        sessionCountFiles.textContent = `${String(currentCount + validFileCount).padStart(2, '0')}/50`;
-    }
-    
-    if (sessionCountSize) {
-        const currentSize = isStackMode ? 
-            parseFloat(sessionCountSize.textContent.split('/')[0]) : 0;
-        const newSize = currentSize + (totalSize / (1024 * 1024));
-        sessionCountSize.textContent = `${newSize.toFixed(2)}MB/250MB`;
-    }
-
-    updateSelectAllState();
+    // Update stats immediately after adding files
+    updateQueueStats();
+    updateSessionStats();
+    updateProcessButtonState();
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
@@ -251,14 +270,65 @@ function simulateProgress(progressFill, statusText) {
         progressFill.style.width = `${progress}%`;
         
         if (progress < 100) {
+            progressFill.setAttribute('data-status', 'uploading');
             statusText.textContent = 'uploading';
         } else {
-            statusText.textContent = 'complete';
+            setReadyStatus(statusText);
+            progressFill.setAttribute('data-status', 'ready'); // Set status before changing classes
             progressFill.classList.remove('bg-blue-500');
             progressFill.classList.add('bg-green-500');
+            
+            setTimeout(() => {
+                progressFill.classList.remove('bg-green-500');
+                progressFill.classList.add('bg-gray-200');
+            }, 1000);
+            
             clearInterval(interval);
+            updateAllStats();
+            updateProcessButtonState();
         }
     }, 100);
+}
+
+// Status setting functions
+function setReadyStatus(statusText) {
+    statusText.innerHTML = `
+        <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+            <span>ready</span>
+        </span>
+    `;
+
+    statusText.parentElement.querySelector('div[data-status]').setAttribute('data-status', 'ready');
+   updateProcessButtonState();
+}
+
+function setAbortedStatus(statusText) {
+    statusText.innerHTML = `
+        <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
+                <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
+            </svg>
+            <span class="text-silver-chalice-400">aborted</span>
+        </span>
+    `;
+
+    statusText.parentElement.querySelector('div[data-status]').setAttribute('data-status', 'aborted');
+    updateProcessButtonState();
+}
+
+function setRejectedStatus(statusText, reason) {
+    statusText.innerHTML = `
+        <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            <span class="text-red-500">rejected</span>
+        </span>
+    `;
+    showErrorToast(reason);
 }
 
 // Placeholder texts for each type
@@ -983,7 +1053,8 @@ async function handleImageUrls(urls) {
 
         const progressFill = document.createElement('div');
         progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
-        progressFill.style.width = '0%';
+       progressFill.style.width = '100%';
+        progressFill.setAttribute('data-status', 'ready');
 
         const statusContainer = document.createElement('div');
         statusContainer.className = 'flex items-center justify-between text-xs';
@@ -1134,24 +1205,74 @@ async function handleImageUrls(urls) {
 
     // Update session stats
     updateSessionStats(urls.length, totalSize * 1024 * 1024, isStackMode);
+
+    updateProcessButtonState();
+}
+
+// Function to update all stats
+function updateAllStats() {
+    updateSessionStats();
+    updateQueueStats();
 }
 
 // Add function to update session stats
-function updateSessionStats(newFileCount, newSizeBytes, shouldAccumulate) {
-    const sessionCountFiles = document.getElementById('session-upload-count-files');
-    const sessionCountSize = document.getElementById('session-upload-count-size');
+function updateSessionStats() {
+    const previewItems = document.querySelectorAll('.preview-item');
+    let totalFiles = 0;
+    let totalSize = 0;
+
+    previewItems.forEach(item => {
+        const progressFill = item.querySelector('div[data-status]');
+        const status = progressFill?.getAttribute('data-status');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        
+        if (status === 'ready' && checkbox?.checked) {
+            totalFiles++;
+            const fileSize = parseInt(item.getAttribute('data-file-size'));
+            totalSize += fileSize;
+        }
+    });
+
+    document.getElementById('session-upload-count-files').textContent = `${String(totalFiles).padStart(2, '0')}/50`;
+    document.getElementById('session-upload-count-size').textContent = `${(totalSize / (1024 * 1024)).toFixed(2)}MB/250MB`;
+}
+
+// Helper function to convert size text to bytes
+function convertSizeToBytes(sizeText) {
+    const size = parseFloat(sizeText);
+    if (sizeText.includes('MB')) return size * 1024 * 1024;
+    if (sizeText.includes('KB')) return size * 1024;
+    return size;
+}
+
+// Function to update queue stats
+function updateQueueStats() {
+    const previewItems = document.querySelectorAll('.preview-item');
+    let queueFiles = 0;
+    let queueSize = 0;
+
+    previewItems.forEach(item => {
+        const progressFill = item.querySelector('.bg-blue-500, .bg-green-500, .bg-gray-200');
+        const status = progressFill.getAttribute('data-status');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        
+        if (status === 'ready' && checkbox.checked) {
+            queueFiles++;
+            const sizeText = item.querySelector('.text-xs').textContent;
+            queueSize += parseFloat(sizeText) * (sizeText.includes('MB') ? 1024 * 1024 : 1024);
+        }
+    });
+
+    // Update DOM elements
+    const queueStatsFiles = document.getElementById('queue-stats-file-count');
+    const queueStatsUsage = document.getElementById('queue-stats-file-usage');
     
-    if (sessionCountFiles) {
-        const currentCount = shouldAccumulate ? 
-            parseInt(sessionCountFiles.textContent.split('/')[0]) : 0;
-        sessionCountFiles.textContent = `${String(currentCount + newFileCount).padStart(2, '0')}/50`;
+    if (queueStatsFiles) {
+        queueStatsFiles.textContent = `${String(queueFiles).padStart(2, '0')}/10`;
     }
     
-    if (sessionCountSize) {
-        const currentSize = shouldAccumulate ? 
-            parseFloat(sessionCountSize.textContent.split('/')[0]) : 0;
-        const newSize = currentSize + (newSizeBytes / (1024 * 1024));
-        sessionCountSize.textContent = `${newSize.toFixed(2)}MB/250MB`;
+    if (queueStatsUsage) {
+        queueStatsUsage.textContent = `${(queueSize / (1024 * 1024)).toFixed(2)}MB/50MB`;
     }
 }
 
@@ -1205,6 +1326,44 @@ importButton.addEventListener('click', () => {
         extractImagesFromLink(url);
     }
 });
+
+// Function to update process button state
+function updateProcessButtonState() {
+    const processButton = document.querySelector('#upl-client-firebase-btn');
+    if (!processButton) return;
+
+    const readyFiles = Array.from(document.querySelectorAll('.preview-item')).filter(item => {
+        const progressFill = item.querySelector('div[data-status]');
+        const status = progressFill?.getAttribute('data-status');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        return status === 'ready' && checkbox?.checked;
+    });
+
+    console.log('Ready files count:', readyFiles.length);
+
+    if (readyFiles.length >= 3) {
+        processButton.classList.remove('cursor-not-allowed', 'opacity-50');
+        processButton.disabled = false;
+    } else {
+        processButton.classList.add('cursor-not-allowed', 'opacity-50');
+        processButton.disabled = true;
+    }
+}
+
+// Function to show error toast
+function showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50 transition-opacity duration-300';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Fade out and remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 //Toggling Stack mode and features
 
