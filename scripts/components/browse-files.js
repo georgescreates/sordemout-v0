@@ -89,10 +89,9 @@ function validateFile(file) {
     }
 
     if (file.size > maxSize) {
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
         return {
             valid: false,
-            error: `File size (${sizeMB}MB) exceeds 5MB limit`
+            error: `File size (${formatFileSize(file.size)}) exceeds 5MB limit`
         };
     }
 
@@ -100,12 +99,9 @@ function validateFile(file) {
 }
 
 // Function to create preview item
-function createPreviewItem(file) {
+function createPreviewItem(file, validation) {
     const previewItem = document.createElement('div');
-
-    // Store the actual file size as a data attribute
     previewItem.setAttribute('data-file-size', file.size);
-
     previewItem.className = currentView === 'list' 
         ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
         : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
@@ -117,8 +113,11 @@ function createPreviewItem(file) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500';
-    checkbox.checked = true;
-    
+    checkbox.checked = validation.valid;
+    if (!validation.valid) {
+        checkbox.disabled = true;
+    }
+
     // Image container
     const imgContainer = document.createElement('div');
     imgContainer.className = currentView === 'list' 
@@ -149,9 +148,15 @@ function createPreviewItem(file) {
     progressBar.className = 'h-1 bg-gray-200 rounded-full overflow-hidden';
 
     const progressFill = document.createElement('div');
-    progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
-    progressFill.style.width = '0%';
-    progressFill.setAttribute('data-status', 'uploading');
+    if (validation.valid) {
+        progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
+        progressFill.style.width = '0%';
+        progressFill.setAttribute('data-status', 'uploading');
+    } else {
+        progressFill.className = 'h-full bg-red-500 transition-all duration-300';
+        progressFill.style.width = '100%';
+        progressFill.setAttribute('data-status', 'rejected');
+    }
 
     const statusContainer = document.createElement('div');
     statusContainer.className = 'flex items-center justify-between text-xs';
@@ -172,9 +177,6 @@ function createPreviewItem(file) {
         <p class="text-base font-bold truncate">${file.name}</p>
     `;
 
-    // Set initial status with check icon
-    setReadyStatus(statusText);
-
     // Assemble all elements
     checkboxContainer.appendChild(checkbox);
     imgContainer.appendChild(img);
@@ -193,22 +195,22 @@ function createPreviewItem(file) {
     previewItem.appendChild(imgContainer);
     previewItem.appendChild(fileInfo);
 
-    // Add checkbox change handler for queue stats update
-    checkbox.addEventListener('change', (e) => {
-        if (!e.target.checked) {
-            setAbortedStatus(statusText);
-            progressFill.classList.remove('bg-blue-500', 'bg-green-500');
-            progressFill.classList.add('bg-gray-400');
-            progressFill.setAttribute('data-status', 'aborted');
-        } else {
-            setReadyStatus(statusText);
-            progressFill.classList.remove('bg-gray-400');
-            progressFill.classList.add('bg-blue-500');
-            progressFill.setAttribute('data-status', 'ready');
-        }
-        // updateAllStats();
-        updateProcessButtonState();
-    });
+    // Handle status based on validation
+    if (!validation.valid) {
+        setRejectedStatus(statusText, previewItem);
+    } else {
+        // Add checkbox change handler only for valid files
+        checkbox.addEventListener('change', (e) => {
+            if (!e.target.checked) {
+                setAbortedStatus(statusText, previewItem);
+            } else {
+                setReadyStatus(statusText, previewItem);
+            }
+            updateAllStats();
+            updateProcessButtonState();
+            updateSelectAllState();
+        });
+    }
 
     return { previewItem, progressFill, statusText };
 }
@@ -232,9 +234,6 @@ function handleFiles(files) {
             ? 'flex flex-col space-y-2' 
             : 'grid grid-cols-2 gap-4 p-2');
 
-    let totalSize = 0;
-    let validFileCount = 0;
-
     // Clear existing items if stack mode is OFF
     if (!isStackMode) {
         previewGrid.innerHTML = '';
@@ -242,37 +241,42 @@ function handleFiles(files) {
 
     files.forEach(file => {
         const validation = validateFile(file);
-        
-        if (validation.valid) {
-            validFileCount++;
-            totalSize += file.size;
-            
-            const { previewItem, progressFill, statusText } = createPreviewItem(file);
-            
-            // If stack mode is ON, add new items at the beginning
-            if (isStackMode) {
-                previewGrid.insertBefore(previewItem, previewGrid.firstChild);
-            } else {
-                previewGrid.appendChild(previewItem);
-            }
-            
-            simulateProgress(progressFill, statusText);
+        const { previewItem, progressFill, statusText } = createPreviewItem(file, validation);
+
+        // Add to grid
+        if (isStackMode) {
+            previewGrid.insertBefore(previewItem, previewGrid.firstChild);
         } else {
-            const { previewItem, progressFill, statusText } = createPreviewItem(file);
-            setRejectedStatus(statusText);
-            // Apply same stack mode logic for rejected files
-            if (isStackMode) {
-                previewGrid.insertBefore(previewItem, previewGrid.firstChild);
-            } else {
-                previewGrid.appendChild(previewItem);
-            }
+            previewGrid.appendChild(previewItem);
+        }
+
+        // Only simulate progress for valid files
+        if (validation.valid) {
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressFill.style.width = `${progress}%`;
+                
+                if (progress < 100) {
+                    statusText.textContent = 'uploading';
+                    progressFill.setAttribute('data-status', 'uploading');
+                    progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
+                } else {
+                    clearInterval(interval);
+                    setReadyStatus(statusText, previewItem);
+                    updateAllStats();
+                    updateProcessButtonState();
+                    updateSelectAllState();
+                }
+            }, 100);
+        } else {
             showErrorToast(validation.error);
         }
     });
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
-function simulateProgress(progressFill, statusText) {
+function simulateProgress(progressFill, statusText, previewItem) {
     let progress = 0;
     const interval = setInterval(() => {
         progress += 5;
@@ -281,27 +285,30 @@ function simulateProgress(progressFill, statusText) {
         if (progress < 100) {
             statusText.textContent = 'uploading';
             progressFill.setAttribute('data-status', 'uploading');
+            progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
         } else {
-            setReadyStatus(statusText);
-            progressFill.classList.remove('bg-blue-500');
-            progressFill.classList.add('bg-green-500');
-            
-            setTimeout(() => {
-                progressFill.classList.remove('bg-green-500');
-                progressFill.classList.add('bg-gray-200');
-            }, 1000);
-            
-            progressFill.setAttribute('data-status', 'ready');
             clearInterval(interval);
-            // Update stats after file is actually ready
+            setReadyStatus(statusText, previewItem);
             updateAllStats();
             updateProcessButtonState();
+            updateSelectAllState();
         }
     }, 100);
 }
 
 // Status setting functions
-function setReadyStatus(statusText) {
+// Status setting functions
+function setReadyStatus(statusText, previewItem) {
+    if (previewItem) {
+        previewItem.classList.remove('opacity-50');
+        
+        const progressFill = previewItem.querySelector('div[data-status]');
+        if (progressFill) {
+            progressFill.className = 'h-full bg-gray-200 transition-all duration-300';
+            progressFill.setAttribute('data-status', 'ready');
+        }
+    }
+
     statusText.innerHTML = `
         <span class="inline-flex items-center gap-1 h-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -310,36 +317,54 @@ function setReadyStatus(statusText) {
             <span>ready</span>
         </span>
     `;
-    
-    // updateProcessButtonState();
 }
 
-function setAbortedStatus(statusText) {
-    const previewItem = statusText.closest('.preview-item');
+function setAbortedStatus(statusText, previewItem) {
+    if (!previewItem) {
+        previewItem = statusText.closest('.preview-item');
+    }
+
     if (previewItem) {
-        const progressFill = previewItem.querySelector('div[data-status]');
-        if (progressFill) {
-            progressFill.classList.remove('bg-blue-500', 'bg-green-500');
-            progressFill.classList.add('bg-gray-400');
-            progressFill.setAttribute('data-status', 'aborted');
-        }
-        
         previewItem.classList.add('opacity-50');
         
-        statusText.innerHTML = `
-            <span class="inline-flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
-                    <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
-                </svg>
-                <span class="text-silver-chalice-400">aborted</span>
-            </span>
-        `;
+        const progressFill = previewItem.querySelector('div[data-status]');
+        if (progressFill) {
+            progressFill.className = 'h-full bg-gray-400 transition-all duration-300';
+            progressFill.setAttribute('data-status', 'aborted');
+        }
     }
-    
-    updateProcessButtonState();
+
+    statusText.innerHTML = `
+        <span class="inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
+                <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
+            </svg>
+            <span class="text-silver-chalice-400">aborted</span>
+        </span>
+    `;
 }
 
-function setRejectedStatus(statusText) {
+function setRejectedStatus(statusText, previewItem) {
+    if (!previewItem) {
+        previewItem = statusText.closest('.preview-item');
+    }
+
+    if (previewItem) {
+        previewItem.classList.add('opacity-50');
+        
+        const progressFill = previewItem.querySelector('div[data-status]');
+        if (progressFill) {
+            progressFill.className = 'h-full bg-red-500 transition-all duration-300';
+            progressFill.setAttribute('data-status', 'rejected');
+        }
+
+        const checkbox = previewItem.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.checked = false;
+            checkbox.disabled = true;
+        }
+    }
+
     statusText.innerHTML = `
         <span class="inline-flex items-center gap-1 h-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="red">
@@ -348,8 +373,6 @@ function setRejectedStatus(statusText) {
             <span class="text-red-500">rejected</span>
         </span>
     `;
-    
-    // updateProcessButtonState();
 }
 
 // Placeholder texts for each type
@@ -479,6 +502,37 @@ function updateButtonStyles() {
     }
 }
 
+function handleSelectAll(checked) {
+    const previewItems = document.querySelectorAll('.preview-item');
+    
+    previewItems.forEach(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const statusText = item.querySelector('.status-text');
+        const progressFill = item.querySelector('div[data-status]');
+        
+        // Skip rejected files
+        if (progressFill?.classList.contains('bg-red-500')) {
+            return;
+        }
+
+        // Update checkbox state
+        if (!checkbox.disabled) {
+            checkbox.checked = checked;
+            
+            // Update status based on checkbox state
+            if (checked) {
+                setReadyStatus(statusText, item);
+            } else {
+                setAbortedStatus(statusText, item);
+            }
+        }
+    });
+    
+    // Update UI states
+    updateProcessButtonState();
+    updateQueueStats();
+}
+
 function updateSelectAllState() {
     const selectAllCheckbox = document.getElementById('select-all');
     if (!selectAllCheckbox) return;
@@ -486,7 +540,7 @@ function updateSelectAllState() {
     const allItems = document.querySelectorAll('.preview-item');
     const validItems = Array.from(allItems).filter(item => {
         const progressFill = item.querySelector('div[data-status]');
-        return !progressFill?.classList.contains('bg-red-500');
+        return progressFill && !progressFill.classList.contains('bg-red-500');
     });
     
     const selectedItems = Array.from(allItems).filter(item => {
@@ -494,41 +548,45 @@ function updateSelectAllState() {
         return checkbox?.checked && !checkbox?.disabled;
     });
 
-    // Only check "select all" if all valid files are selected
-    selectAllCheckbox.checked = selectedItems.length === validItems.length && validItems.length > 0;
+    selectAllCheckbox.checked = validItems.length > 0 && selectedItems.length === validItems.length;
     selectAllCheckbox.indeterminate = selectedItems.length > 0 && selectedItems.length < validItems.length;
 }
 
-selectAllCheckbox.addEventListener('change', (e) => {
-    console.log('Select all triggered, checked:', e.target.checked);
+function getItemStatus(previewItem) {
+    const progressFill = previewItem.querySelector('div[data-status]');
+    const checkbox = previewItem.querySelector('input[type="checkbox"]');
+    const statusText = previewItem.querySelector('.status-text');
     
+    return {
+        dataStatus: progressFill?.getAttribute('data-status'),
+        progressClasses: progressFill?.className,
+        isChecked: checkbox?.checked,
+        isDisabled: checkbox?.disabled,
+        statusText: statusText?.textContent.trim(),
+        opacity: previewItem.classList.contains('opacity-50')
+    };
+}
+
+selectAllCheckbox.addEventListener('change', (e) => {
     const previewItems = previewGrid.querySelectorAll('.preview-item');
+    
     previewItems.forEach(item => {
-        // Update the selector to find the progress fill with blue, green, or red background
-        const progressFill = item.querySelector('.bg-blue-500, .bg-green-500, .bg-gray-400, .bg-red-500');
+        const progressFill = item.querySelector('div[data-status]');
         const statusText = item.querySelector('.status-text');
-        const currentStatus = progressFill?.getAttribute('data-status');
-        console.log('Progress fill element:', progressFill);
-        console.log('Item current status:', currentStatus);
+        const checkbox = item.querySelector('input[type="checkbox"]');
         
         // Skip rejected files
         if (progressFill?.classList.contains('bg-red-500')) {
-            console.log('Skipping rejected file');
-            const checkbox = item.querySelector('input[type="checkbox"]');
             checkbox.checked = false;
             checkbox.disabled = true;
             return;
         }
 
-        // Handle non-rejected files
+        checkbox.checked = e.target.checked;
         if (e.target.checked) {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            checkbox.checked = true;
-            setReadyStatus(statusText);
+            setReadyStatus(statusText, item);
         } else {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            checkbox.checked = false;
-            setAbortedStatus(statusText);
+            setAbortedStatus(statusText, item);
         }
     });
     
@@ -1051,19 +1109,14 @@ async function getImageSize(url) {
 
 // Add this function to browse-files.js
 async function handleImageUrls(urls) {
-    // Track total size for session limits
-    let totalSize = 0;
-
     // Show preview grid if hidden
     emptyState.classList.add('hidden');
     previewGrid.classList.remove('hidden');
     
-    // Clear grid only if stack mode is OFF
     if (!isStackMode) {
         previewGrid.innerHTML = '';
     }
     
-    // Base classes for preview grid
     previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
         (currentView === 'list' 
             ? 'flex flex-col space-y-2' 
@@ -1086,65 +1139,7 @@ async function handleImageUrls(urls) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500';
-
-        checkboxContainer.appendChild(checkbox);
-        preview.appendChild(checkboxContainer);
-
-        // Create status elements
-        const progressContainer = document.createElement('div');
-        progressContainer.className = 'w-full flex flex-col gap-1';
-
-        const progressBar = document.createElement('div');
-        progressBar.className = 'h-1 bg-gray-200 rounded-full overflow-hidden';
-
-        const progressFill = document.createElement('div');
-        progressFill.className = 'h-full transition-all duration-300';
-        progressFill.style.width = '100%';
-
-        const statusContainer = document.createElement('div');
-        statusContainer.className = 'flex items-center justify-between text-xs';
-
-        const statusText = document.createElement('span');
-        statusText.className = 'status-text ' + 
-            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
-
-        const progressSize = document.createElement('span');
-        progressSize.className = 'progress-size ' + 
-            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
-        progressSize.textContent = `${sizeInfo.displaySize}`;
-
-        const authSuggestion = document.createElement('span');
-        authSuggestion.className = 'auth-suggestion';
-
-        // Set initial state based on size validation
-        if (sizeInfo.size > 5) {
-            setRejectedStatus(statusText);
-            progressFill.classList.add('bg-red-500');
-            progressFill.setAttribute('data-status', 'rejected');
-            checkbox.checked = false;
-            checkbox.disabled = true;
-            authSuggestion.innerHTML = `
-                <a href="/login" class="text-lochmara-500 hover:text-lochmara-600 cursor-pointer underline">
-                    consider log in or sign up
-                </a>
-            `;
-        } else {
-            setReadyStatus(statusText);
-            progressFill.classList.add('bg-gray-200');
-            progressFill.setAttribute('data-status', 'ready');
-            authSuggestion.classList.add('hidden');
-            checkbox.checked = true;
-        }
-
-        // Assemble status container
-        statusContainer.appendChild(statusText);
-        statusContainer.appendChild(progressSize);
-        statusContainer.appendChild(authSuggestion);
-
-        // Assemble progress elements
-        progressBar.appendChild(progressFill);
-        progressContainer.appendChild(progressBar);
-        progressContainer.appendChild(statusContainer);
+        checkbox.checked = sizeInfo.size <= 5; // Only check if valid size
 
         // Image container
         const imgContainer = document.createElement('div');
@@ -1155,6 +1150,31 @@ async function handleImageUrls(urls) {
         const img = document.createElement('img');
         img.className = 'w-full h-full object-cover';
         img.src = url;
+
+        // Progress container
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'w-full flex flex-col gap-1';
+
+        const progressBar = document.createElement('div');
+        progressBar.className = 'h-1 bg-gray-200 rounded-full overflow-hidden';
+
+        const progressFill = document.createElement('div');
+        progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
+        progressFill.style.width = '0%';
+        progressFill.setAttribute('data-status', 'uploading');
+
+        const statusContainer = document.createElement('div');
+        statusContainer.className = 'flex items-center justify-between text-xs';
+
+        const statusText = document.createElement('span');
+        statusText.className = 'status-text ' + 
+            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
+        statusText.textContent = 'uploading';
+
+        const progressSize = document.createElement('span');
+        progressSize.className = 'progress-size ' + 
+            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
+        progressSize.textContent = sizeInfo.displaySize;
 
         // File info section
         const fileInfo = document.createElement('div');
@@ -1171,26 +1191,67 @@ async function handleImageUrls(urls) {
         `;
 
         // Assemble file info
+        statusContainer.appendChild(statusText);
+        statusContainer.appendChild(progressSize);
+        
+        progressBar.appendChild(progressFill);
+        progressContainer.appendChild(progressBar);
+        progressContainer.appendChild(statusContainer);
+
         fileInfo.appendChild(fileHeader);
         fileInfo.appendChild(progressContainer);
 
-        // Add checkbox change handler only for non-rejected files
-        if (sizeInfo.size <= 5) {
-            checkbox.addEventListener('change', (e) => {
-                if (!e.target.checked) {
-                    setAbortedStatus(statusText);
-                } else {
-                    setReadyStatus(statusText);
-                }
-            });
-        }
-
-        // Final assembly
         imgContainer.appendChild(img);
+        checkboxContainer.appendChild(checkbox);
+
+        preview.appendChild(checkboxContainer);
         preview.appendChild(imgContainer);
         preview.appendChild(fileInfo);
 
-        // Add to grid respecting stack mode
+        // Handle initial state based on size validation
+        if (sizeInfo.size > 5) {
+            // Handle oversized file
+            setRejectedStatus(statusText, preview);
+            showErrorToast(`File size (${sizeInfo.displaySize}) exceeds 5MB limit`);
+            checkbox.checked = false;
+            checkbox.disabled = true;
+            
+            progressFill.className = 'h-full bg-red-500 transition-all duration-300';
+            progressFill.setAttribute('data-status', 'rejected');
+            progressFill.style.width = '100%';
+        } else {
+            // For valid files, start upload simulation
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                progressFill.style.width = `${progress}%`;
+                
+                if (progress < 100) {
+                    statusText.textContent = 'uploading';
+                    progressFill.setAttribute('data-status', 'uploading');
+                    progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
+                } else {
+                    clearInterval(interval);
+                    setReadyStatus(statusText, preview);
+                    updateAllStats();
+                    updateProcessButtonState();
+                    updateSelectAllState();
+                }
+            }, 100);
+
+            // Add checkbox event listener only for valid files
+            checkbox.addEventListener('change', (e) => {
+                if (!e.target.checked) {
+                    setAbortedStatus(statusText, preview);
+                } else {
+                    setReadyStatus(statusText, preview);
+                }
+                updateAllStats();
+                updateProcessButtonState();
+                updateSelectAllState();
+            });
+        }
+
         if (isStackMode) {
             previewGrid.insertBefore(preview, previewGrid.firstChild);
         } else {
@@ -1198,7 +1259,6 @@ async function handleImageUrls(urls) {
         }
     }
 
-    // Update UI state
     updateProcessButtonState();
 }
 
