@@ -84,14 +84,15 @@ function validateFile(file) {
     if (!validTypes.includes(file.type)) {
         return {
             valid: false,
-            error: 'Invalid file type. Only JPG, JPEG and PNG files are allowed.'
+            error: `Invalid file type: ${file.type}. Only JPG, JPEG and PNG files are allowed.`
         };
     }
 
     if (file.size > maxSize) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
         return {
             valid: false,
-            error: 'File size exceeds 5MB limit.'
+            error: `File size (${sizeMB}MB) exceeds 5MB limit`
         };
     }
 
@@ -168,7 +169,7 @@ function createPreviewItem(file) {
     const fileHeader = document.createElement('div');
     fileHeader.className = 'flex justify-between items-center';
     fileHeader.innerHTML = `
-        <p class="text-sm truncate">${file.name}</p>
+        <p class="text-base font-bold truncate">${file.name}</p>
     `;
 
     // Set initial status with check icon
@@ -205,7 +206,7 @@ function createPreviewItem(file) {
             progressFill.classList.add('bg-blue-500');
             progressFill.setAttribute('data-status', 'ready');
         }
-        updateAllStats();
+        // updateAllStats();
         updateProcessButtonState();
     });
 
@@ -216,6 +217,11 @@ function createPreviewItem(file) {
 function handleFiles(files) {
     const emptyState = document.getElementById('empty-state');
     const previewGrid = document.getElementById('preview-grid');
+
+    if (!emptyState || !previewGrid) {
+        console.error('Required DOM elements not found');
+        return;
+    }
     
     // Show preview grid and hide empty state
     emptyState.classList.add('hidden');
@@ -252,14 +258,17 @@ function handleFiles(files) {
             
             simulateProgress(progressFill, statusText);
         } else {
+            const { previewItem, progressFill, statusText } = createPreviewItem(file);
+            setRejectedStatus(statusText);
+            // Apply same stack mode logic for rejected files
+            if (isStackMode) {
+                previewGrid.insertBefore(previewItem, previewGrid.firstChild);
+            } else {
+                previewGrid.appendChild(previewItem);
+            }
             showErrorToast(validation.error);
         }
     });
-
-    // Update stats immediately after adding files
-    updateQueueStats();
-    updateSessionStats();
-    updateProcessButtonState();
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
@@ -270,11 +279,10 @@ function simulateProgress(progressFill, statusText) {
         progressFill.style.width = `${progress}%`;
         
         if (progress < 100) {
-            progressFill.setAttribute('data-status', 'uploading');
             statusText.textContent = 'uploading';
+            progressFill.setAttribute('data-status', 'uploading');
         } else {
             setReadyStatus(statusText);
-            progressFill.setAttribute('data-status', 'ready'); // Set status before changing classes
             progressFill.classList.remove('bg-blue-500');
             progressFill.classList.add('bg-green-500');
             
@@ -283,7 +291,9 @@ function simulateProgress(progressFill, statusText) {
                 progressFill.classList.add('bg-gray-200');
             }, 1000);
             
+            progressFill.setAttribute('data-status', 'ready');
             clearInterval(interval);
+            // Update stats after file is actually ready
             updateAllStats();
             updateProcessButtonState();
         }
@@ -293,42 +303,53 @@ function simulateProgress(progressFill, statusText) {
 // Status setting functions
 function setReadyStatus(statusText) {
     statusText.innerHTML = `
-        <span class="inline-flex items-center gap-1">
+        <span class="inline-flex items-center gap-1 h-auto">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
             </svg>
             <span>ready</span>
         </span>
     `;
-
-    statusText.parentElement.querySelector('div[data-status]').setAttribute('data-status', 'ready');
-   updateProcessButtonState();
+    
+    // updateProcessButtonState();
 }
 
 function setAbortedStatus(statusText) {
-    statusText.innerHTML = `
-        <span class="inline-flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
-                <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
-            </svg>
-            <span class="text-silver-chalice-400">aborted</span>
-        </span>
-    `;
-
-    statusText.parentElement.querySelector('div[data-status]').setAttribute('data-status', 'aborted');
+    const previewItem = statusText.closest('.preview-item');
+    if (previewItem) {
+        const progressFill = previewItem.querySelector('div[data-status]');
+        if (progressFill) {
+            progressFill.classList.remove('bg-blue-500', 'bg-green-500');
+            progressFill.classList.add('bg-gray-400');
+            progressFill.setAttribute('data-status', 'aborted');
+        }
+        
+        previewItem.classList.add('opacity-50');
+        
+        statusText.innerHTML = `
+            <span class="inline-flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
+                    <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
+                </svg>
+                <span class="text-silver-chalice-400">aborted</span>
+            </span>
+        `;
+    }
+    
     updateProcessButtonState();
 }
 
-function setRejectedStatus(statusText, reason) {
+function setRejectedStatus(statusText) {
     statusText.innerHTML = `
-        <span class="inline-flex items-center gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <span class="inline-flex items-center gap-1 h-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="red">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
             <span class="text-red-500">rejected</span>
         </span>
     `;
-    showErrorToast(reason);
+    
+    // updateProcessButtonState();
 }
 
 // Placeholder texts for each type
@@ -459,30 +480,59 @@ function updateButtonStyles() {
 }
 
 function updateSelectAllState() {
-    const totalItems = previewGrid.querySelectorAll('.preview-item').length;
-    const selectedCount = previewGrid.querySelectorAll('input[type="checkbox"]:checked').length;
+    const selectAllCheckbox = document.getElementById('select-all');
+    if (!selectAllCheckbox) return;
+
+    const allItems = document.querySelectorAll('.preview-item');
+    const validItems = Array.from(allItems).filter(item => {
+        const progressFill = item.querySelector('div[data-status]');
+        return !progressFill?.classList.contains('bg-red-500');
+    });
     
-    selectAllCheckbox.checked = selectedCount === totalItems && totalItems > 0;
-    
-    // Update queue stats if you have them
-    updateQueueStats();
+    const selectedItems = Array.from(allItems).filter(item => {
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        return checkbox?.checked && !checkbox?.disabled;
+    });
+
+    // Only check "select all" if all valid files are selected
+    selectAllCheckbox.checked = selectedItems.length === validItems.length && validItems.length > 0;
+    selectAllCheckbox.indeterminate = selectedItems.length > 0 && selectedItems.length < validItems.length;
 }
 
 selectAllCheckbox.addEventListener('change', (e) => {
-    const checkboxes = previewGrid.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = e.target.checked;
+    console.log('Select all triggered, checked:', e.target.checked);
+    
+    const previewItems = previewGrid.querySelectorAll('.preview-item');
+    previewItems.forEach(item => {
+        // Update the selector to find the progress fill with blue, green, or red background
+        const progressFill = item.querySelector('.bg-blue-500, .bg-green-500, .bg-gray-400, .bg-red-500');
+        const statusText = item.querySelector('.status-text');
+        const currentStatus = progressFill?.getAttribute('data-status');
+        console.log('Progress fill element:', progressFill);
+        console.log('Item current status:', currentStatus);
         
-        const previewItem = checkbox.closest('.preview-item');
-        const imageUrl = previewItem.getAttribute('data-preview-id');
-        
+        // Skip rejected files
+        if (progressFill?.classList.contains('bg-red-500')) {
+            console.log('Skipping rejected file');
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox.checked = false;
+            checkbox.disabled = true;
+            return;
+        }
+
+        // Handle non-rejected files
         if (e.target.checked) {
-            selectedFiles.add(imageUrl);
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox.checked = true;
+            setReadyStatus(statusText);
         } else {
-            selectedFiles.delete(imageUrl);
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            checkbox.checked = false;
+            setAbortedStatus(statusText);
         }
     });
-    updateQueueStats();
+    
+    updateProcessButtonState();
 });
 
 function updateQueueStats() {
@@ -1022,14 +1072,12 @@ async function handleImageUrls(urls) {
     for (const url of urls) {
         // Get size before creating preview
         const sizeInfo = await getImageSize(url);
-        totalSize += sizeInfo.size;
 
         const preview = document.createElement('div');
-
+        preview.setAttribute('data-preview-id', url);
         preview.className = currentView === 'list' 
             ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
             : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
-        preview.setAttribute('data-preview-id', url);
 
         // Checkbox container
         const checkboxContainer = document.createElement('div');
@@ -1038,13 +1086,11 @@ async function handleImageUrls(urls) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500';
-        checkbox.checked = sizeInfo.size <= 5;
-        checkbox.disabled = sizeInfo.size > 5;
 
         checkboxContainer.appendChild(checkbox);
         preview.appendChild(checkboxContainer);
 
-        // Create all status elements
+        // Create status elements
         const progressContainer = document.createElement('div');
         progressContainer.className = 'w-full flex flex-col gap-1';
 
@@ -1052,9 +1098,8 @@ async function handleImageUrls(urls) {
         progressBar.className = 'h-1 bg-gray-200 rounded-full overflow-hidden';
 
         const progressFill = document.createElement('div');
-        progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
-       progressFill.style.width = '100%';
-        progressFill.setAttribute('data-status', 'ready');
+        progressFill.className = 'h-full transition-all duration-300';
+        progressFill.style.width = '100%';
 
         const statusContainer = document.createElement('div');
         statusContainer.className = 'flex items-center justify-between text-xs';
@@ -1062,14 +1107,6 @@ async function handleImageUrls(urls) {
         const statusText = document.createElement('span');
         statusText.className = 'status-text ' + 
             (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
-        statusText.innerHTML = `
-            <span class="inline-flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                <span>ready</span>
-            </span>
-        `;
 
         const progressSize = document.createElement('span');
         progressSize.className = 'progress-size ' + 
@@ -1077,41 +1114,34 @@ async function handleImageUrls(urls) {
         progressSize.textContent = `${sizeInfo.displaySize}`;
 
         const authSuggestion = document.createElement('span');
-        authSuggestion.className = 'auth-suggestion ' + 
-            (currentView === 'list' ? 'text-blue-500' : 'text-blue-300');
-        authSuggestion.classList.add('hidden'); // Hidden by default
+        authSuggestion.className = 'auth-suggestion';
 
-        // Size check and checkbox state
+        // Set initial state based on size validation
         if (sizeInfo.size > 5) {
+            setRejectedStatus(statusText);
+            progressFill.classList.add('bg-red-500');
+            progressFill.setAttribute('data-status', 'rejected');
             checkbox.checked = false;
             checkbox.disabled = true;
-            checkbox.classList.add('cursor-not-allowed', 'opacity-50');
-
-            statusText.innerHTML = `
-                <span class="inline-flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    <span class="text-red-500">rejected</span>
-                </span>
+            authSuggestion.innerHTML = `
+                <a href="/login" class="text-lochmara-500 hover:text-lochmara-600 cursor-pointer underline">
+                    consider log in or sign up
+                </a>
             `;
-            progressFill.classList.remove('bg-blue-500');
-            progressFill.classList.add('bg-red-500');
-            preview.classList.add('opacity-50');
-
-            // Show auth suggestion for rejected files
-            authSuggestion.textContent = 'consider log in or sign up';
-            authSuggestion.classList.remove('hidden');
         } else {
+            setReadyStatus(statusText);
+            progressFill.classList.add('bg-gray-200');
+            progressFill.setAttribute('data-status', 'ready');
             authSuggestion.classList.add('hidden');
+            checkbox.checked = true;
         }
 
-        // Then assemble your status container
+        // Assemble status container
         statusContainer.appendChild(statusText);
         statusContainer.appendChild(progressSize);
         statusContainer.appendChild(authSuggestion);
 
-        // Assemble progress bar
+        // Assemble progress elements
         progressBar.appendChild(progressFill);
         progressContainer.appendChild(progressBar);
         progressContainer.appendChild(statusContainer);
@@ -1126,16 +1156,13 @@ async function handleImageUrls(urls) {
         img.className = 'w-full h-full object-cover';
         img.src = url;
 
-        // File info section with progress
+        // File info section
         const fileInfo = document.createElement('div');
         fileInfo.className = currentView === 'list' 
-            ? 'flex-1 h-20 px-4 flex flex-col justify-center gap-2' // Increased gap
+            ? 'flex-1 h-20 px-4 flex flex-col justify-center gap-2'
             : 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-2';
 
-        // Get image size
-        const fileSize = await getImageSize(url);
-
-        // File name and size container
+        // File header
         const fileHeader = document.createElement('div');
         fileHeader.className = 'flex justify-between items-center';
         const fileName = url.split('/').pop() || 'image';
@@ -1143,56 +1170,27 @@ async function handleImageUrls(urls) {
             <p class="text-base font-bold truncate">${fileName}</p>
         `;
 
-        // Assemble all elements
+        // Assemble file info
         fileInfo.appendChild(fileHeader);
         fileInfo.appendChild(progressContainer);
 
-        // Add change handler for checkbox
-        checkbox.addEventListener('change', (e) => {
-            if (!e.target.checked) {
-                // Update status for aborted state
-                statusText.innerHTML = `
-                    <span class="inline-flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="12px" viewBox="0 -960 960 960" width="12px" fill="#a6a6a6">
-                            <path d="M480.07-100q-78.84 0-148.21-29.92t-120.68-81.21q-51.31-51.29-81.25-120.63Q100-401.1 100-479.93q0-78.84 29.92-148.21t81.21-120.68q51.29-51.31 120.63-81.25Q401.1-860 479.93-860q78.84 0 148.21 29.92t120.68 81.21q51.31 51.29 81.25 120.63Q860-558.9 860-480.07q0 78.84-29.92 148.21t-81.21 120.68q-51.29 51.31-120.63 81.25Q558.9-100 480.07-100Z"/>
-                        </svg>
-                        <span class="text-silver-chalice-400">aborted</span>
-                    </span>
-                `;
-                progressFill.classList.remove('bg-blue-500', 'bg-green-500');
-                progressFill.classList.add('bg-gray-400');
-                preview.classList.add('opacity-50');
-                
-                // Hide auth suggestion for aborted files
-                authSuggestion.classList.add('hidden');
-            } else {
-                // Restore ready state
-                statusText.innerHTML = `
-                    <span class="inline-flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                        <span>ready</span>
-                    </span>
-                `;
-                progressFill.classList.remove('bg-gray-400');
-                progressFill.classList.add('bg-blue-500');
-                preview.classList.remove('opacity-50');
-                
-                // Hide auth suggestion for ready files
-                authSuggestion.classList.add('hidden');
-            }
-        });
+        // Add checkbox change handler only for non-rejected files
+        if (sizeInfo.size <= 5) {
+            checkbox.addEventListener('change', (e) => {
+                if (!e.target.checked) {
+                    setAbortedStatus(statusText);
+                } else {
+                    setReadyStatus(statusText);
+                }
+            });
+        }
 
-        // Assemble preview
+        // Final assembly
         imgContainer.appendChild(img);
         preview.appendChild(imgContainer);
         preview.appendChild(fileInfo);
 
-        // Add to preview grid
-        previewGrid.appendChild(preview);
-
-        // Add new items at the top in stack mode
+        // Add to grid respecting stack mode
         if (isStackMode) {
             previewGrid.insertBefore(preview, previewGrid.firstChild);
         } else {
@@ -1200,12 +1198,7 @@ async function handleImageUrls(urls) {
         }
     }
 
-    // Update selection state
-    updateSelectAllState();
-
-    // Update session stats
-    updateSessionStats(urls.length, totalSize * 1024 * 1024, isStackMode);
-
+    // Update UI state
     updateProcessButtonState();
 }
 
@@ -1332,16 +1325,23 @@ function updateProcessButtonState() {
     const processButton = document.querySelector('#upl-client-firebase-btn');
     if (!processButton) return;
 
-    const readyFiles = Array.from(document.querySelectorAll('.preview-item')).filter(item => {
+    const fileItems = document.querySelectorAll('.preview-item');
+    const readyFiles = Array.from(fileItems).filter(item => {
         const progressFill = item.querySelector('div[data-status]');
-        const status = progressFill?.getAttribute('data-status');
         const checkbox = item.querySelector('input[type="checkbox"]');
-        return status === 'ready' && checkbox?.checked;
+        const status = progressFill?.getAttribute('data-status');
+        
+        // Must be ready, checked, and not rejected
+        return status === 'ready' && 
+               checkbox?.checked && 
+               !checkbox?.disabled && 
+               !progressFill.classList.contains('bg-red-500');
     });
 
-    console.log('Ready files count:', readyFiles.length);
+    const count = readyFiles.length;
+    processButton.innerHTML = `Process ${count > 2 ? `${count}` : ''} Selected Files`;
 
-    if (readyFiles.length >= 3) {
+    if (count >= 3) {
         processButton.classList.remove('cursor-not-allowed', 'opacity-50');
         processButton.disabled = false;
     } else {
