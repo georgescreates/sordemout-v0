@@ -102,9 +102,7 @@ function validateFile(file) {
 function createPreviewItem(file, validation) {
     const previewItem = document.createElement('div');
     previewItem.setAttribute('data-file-size', file.size);
-    previewItem.className = currentView === 'list' 
-        ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
-        : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
+    previewItem.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
 
     // Checkbox container
     const checkboxContainer = document.createElement('div');
@@ -118,11 +116,9 @@ function createPreviewItem(file, validation) {
         checkbox.disabled = true;
     }
 
-    // Image container
+    // Image container - default to list view (thumbnail)
     const imgContainer = document.createElement('div');
-    imgContainer.className = currentView === 'list' 
-        ? 'h-20 w-20 flex-shrink-0' 
-        : 'w-full h-full';
+    imgContainer.className = 'h-20 w-20 flex-shrink-0';
 
     const img = document.createElement('img');
     img.className = 'w-full h-full object-cover';
@@ -134,11 +130,9 @@ function createPreviewItem(file, validation) {
     };
     reader.readAsDataURL(file);
 
-    // File info section
+    // File info section - default to list view
     const fileInfo = document.createElement('div');
-    fileInfo.className = currentView === 'list'
-        ? 'flex-1 h-20 px-4 flex flex-col justify-center gap-2'
-        : 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-2';
+    fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-2';
 
     // Progress container
     const progressContainer = document.createElement('div');
@@ -162,12 +156,10 @@ function createPreviewItem(file, validation) {
     statusContainer.className = 'flex items-center justify-between text-xs';
 
     const statusText = document.createElement('span');
-    statusText.className = 'status-text ' + 
-        (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
+    statusText.className = 'status-text text-gray-500';
     
     const fileSize = document.createElement('span');
-    fileSize.className = 'text-xs ' + 
-        (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
+    fileSize.className = 'text-xs text-gray-500';
     fileSize.textContent = formatFileSize(file.size);
 
     // File header (name and size)
@@ -229,10 +221,8 @@ function handleFiles(files) {
     emptyState.classList.add('hidden');
     previewGrid.classList.remove('hidden');
     
-    previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
-        (currentView === 'list' 
-            ? 'flex flex-col space-y-2' 
-            : 'grid grid-cols-2 gap-4 p-2');
+    // Only set base classes
+    previewGrid.className = 'w-full h-[536px] overflow-y-auto';
 
     // Clear existing items if stack mode is OFF
     if (!isStackMode) {
@@ -250,29 +240,15 @@ function handleFiles(files) {
             previewGrid.appendChild(previewItem);
         }
 
-        // Only simulate progress for valid files
         if (validation.valid) {
-            let progress = 0;
-            const interval = setInterval(() => {
-                progress += 5;
-                progressFill.style.width = `${progress}%`;
-                
-                if (progress < 100) {
-                    statusText.textContent = 'uploading';
-                    progressFill.setAttribute('data-status', 'uploading');
-                    progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
-                } else {
-                    clearInterval(interval);
-                    setReadyStatus(statusText, previewItem);
-                    updateAllStats();
-                    updateProcessButtonState();
-                    updateSelectAllState();
-                }
-            }, 100);
+            simulateProgress(progressFill, statusText, previewItem);
         } else {
             showErrorToast(validation.error);
         }
     });
+
+    // Apply current view layout
+    toggleView(currentView);
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
@@ -459,37 +435,82 @@ function toggleView(view) {
     if (currentView === view) return;
     currentView = view;
     updateButtonStyles();
-    updatePreviewLayout();
     
     const previewItems = previewGrid.querySelectorAll('.preview-item');
+    const hasItems = previewItems.length > 0;
+    
+    if (!hasItems) {
+        emptyState.classList.remove('hidden');
+        previewGrid.classList.add('hidden');
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+    previewGrid.classList.remove('hidden');
+
+    // Base container styles remain the same
+    previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
+
+    if (view === 'list') {
+        // Compact View (row layout)
+        previewItems.forEach(item => {
+            item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
+            
+            const imgContainer = item.querySelector('div:first-child');
+            imgContainer.className = 'h-20 w-20 flex-shrink-0';
+            
+            const fileInfo = item.querySelector('div:nth-child(2)');
+            fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-2';
+            
+            // Update text colors for compact view
+            const statusText = item.querySelector('.status-text');
+            const fileSize = item.querySelector('.text-xs:last-child');
+            if (statusText) statusText.className = 'status-text text-gray-500';
+            if (fileSize) fileSize.className = 'text-xs text-gray-500';
+        });
+    } else {
+        // Expanded View (column layout)
+        previewItems.forEach(item => {
+            item.className = 'preview-item flex flex-col w-full bg-white rounded-sm overflow-hidden relative transition-all duration-300';
+            
+            const imgContainer = item.querySelector('div:first-child');
+            imgContainer.className = 'w-full h-60 relative';
+            
+            const fileInfo = item.querySelector('div:nth-child(2)');
+            fileInfo.className = 'w-full p-4 flex flex-col gap-2';
+            
+            // Update text colors for expanded view
+            const statusText = item.querySelector('.status-text');
+            const fileSize = item.querySelector('.text-xs:last-child');
+            if (statusText) statusText.className = 'status-text text-gray-500';
+            if (fileSize) fileSize.className = 'text-xs text-gray-500';
+        });
+    }
+
+    // Maintain states after transition
     previewItems.forEach(item => {
-        if (view === 'list') {
-            previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
-            previewItems.forEach(item => {
-                item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
-                const imgContainer = item.querySelector('div:first-child');
-                imgContainer.className = 'h-20 w-20 flex-shrink-0';
-                const fileInfo = item.querySelector('div:nth-child(2)');
-                fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-1';
-            });
-        } else {
-            previewGrid.className = 'w-full h-[536px] overflow-y-auto grid grid-cols-2 gap-4 p-2';
-            previewItems.forEach(item => {
-                item.className = 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
-                const imgContainer = item.querySelector('div:first-child');
-                imgContainer.className = 'w-full h-full';
-                const fileInfo = item.querySelector('div:nth-child(2)');
-                fileInfo.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-1';
-            });
+        const progressFill = item.querySelector('div[data-status]');
+        const statusText = item.querySelector('.status-text');
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        
+        // Maintain the current status
+        if (progressFill && statusText) {
+            const status = progressFill.getAttribute('data-status');
+            if (status === 'ready' && checkbox?.checked) {
+                setReadyStatus(statusText, item);
+            } else if (status === 'aborted' || !checkbox?.checked) {
+                setAbortedStatus(statusText, item);
+            }
         }
     });
+
 }
 
 function updateButtonStyles() {
     // Reset both buttons to default state
     [listViewBtn, gridViewBtn].forEach(btn => {
         btn.style.backgroundColor = '';
-        btn.style.color = '#072c4a'; // Default gray color for inactive
+        btn.style.color = '#072c4a';
     });
     
     // Set active button style
@@ -1116,11 +1137,6 @@ async function handleImageUrls(urls) {
     if (!isStackMode) {
         previewGrid.innerHTML = '';
     }
-    
-    previewGrid.className = 'w-full h-[536px] overflow-y-auto ' + 
-        (currentView === 'list' 
-            ? 'flex flex-col space-y-2' 
-            : 'grid grid-cols-2 gap-4 p-2');
 
     for (const url of urls) {
         // Get size before creating preview
@@ -1128,9 +1144,9 @@ async function handleImageUrls(urls) {
 
         const preview = document.createElement('div');
         preview.setAttribute('data-preview-id', url);
-        preview.className = currentView === 'list' 
-            ? 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative'
-            : 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
+        preview.setAttribute('data-file-size', sizeInfo.size);
+        // Default to list view layout
+        preview.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
 
         // Checkbox container
         const checkboxContainer = document.createElement('div');
@@ -1141,15 +1157,17 @@ async function handleImageUrls(urls) {
         checkbox.className = 'h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500';
         checkbox.checked = sizeInfo.size <= 5; // Only check if valid size
 
-        // Image container
+        // Image container - default to list view
         const imgContainer = document.createElement('div');
-        imgContainer.className = currentView === 'list' 
-            ? 'h-20 w-20 flex-shrink-0' 
-            : 'w-full h-full';
+        imgContainer.className = 'h-20 w-20 flex-shrink-0';
 
         const img = document.createElement('img');
         img.className = 'w-full h-full object-cover';
         img.src = url;
+
+        // File info section - default to list view
+        const fileInfo = document.createElement('div');
+        fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-2';
 
         // Progress container
         const progressContainer = document.createElement('div');
@@ -1159,7 +1177,7 @@ async function handleImageUrls(urls) {
         progressBar.className = 'h-1 bg-gray-200 rounded-full overflow-hidden';
 
         const progressFill = document.createElement('div');
-        progressFill.className = 'h-full bg-blue-500 transition-all duration-300';
+        progressFill.className = 'h-full transition-all duration-300';
         progressFill.style.width = '0%';
         progressFill.setAttribute('data-status', 'uploading');
 
@@ -1167,20 +1185,11 @@ async function handleImageUrls(urls) {
         statusContainer.className = 'flex items-center justify-between text-xs';
 
         const statusText = document.createElement('span');
-        statusText.className = 'status-text ' + 
-            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
-        statusText.textContent = 'uploading';
+        statusText.className = 'status-text text-gray-500';
 
         const progressSize = document.createElement('span');
-        progressSize.className = 'progress-size ' + 
-            (currentView === 'list' ? 'text-gray-500' : 'text-gray-300');
+        progressSize.className = 'text-xs text-gray-500';
         progressSize.textContent = sizeInfo.displaySize;
-
-        // File info section
-        const fileInfo = document.createElement('div');
-        fileInfo.className = currentView === 'list' 
-            ? 'flex-1 h-20 px-4 flex flex-col justify-center gap-2'
-            : 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-2';
 
         // File header
         const fileHeader = document.createElement('div');
@@ -1190,7 +1199,7 @@ async function handleImageUrls(urls) {
             <p class="text-base font-bold truncate">${fileName}</p>
         `;
 
-        // Assemble file info
+        // Assemble all elements
         statusContainer.appendChild(statusText);
         statusContainer.appendChild(progressSize);
         
@@ -1210,7 +1219,6 @@ async function handleImageUrls(urls) {
 
         // Handle initial state based on size validation
         if (sizeInfo.size > 5) {
-            // Handle oversized file
             setRejectedStatus(statusText, preview);
             showErrorToast(`File size (${sizeInfo.displaySize}) exceeds 5MB limit`);
             checkbox.checked = false;
@@ -1259,6 +1267,8 @@ async function handleImageUrls(urls) {
         }
     }
 
+    // Apply current view layout after adding all items
+    toggleView(currentView);
     updateProcessButtonState();
 }
 
@@ -1441,41 +1451,3 @@ stackModeContainer.addEventListener('click', (e) => {
         stackModeToggle.nextElementSibling.classList.remove('bg-lochmara-600');
     }
 });
-
-// Add this new function
-function updatePreviewLayout() {
-    const previewGrid = document.getElementById('preview-grid');
-    const previewItems = previewGrid.querySelectorAll('.preview-item');
-    
-    if (isStackMode) {
-        previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col items-center gap-4 p-2';
-        previewItems.forEach(item => {
-            item.className = 'preview-item w-full max-w-md bg-white rounded-sm overflow-hidden relative';
-            const imgContainer = item.querySelector('div:first-child');
-            imgContainer.className = 'w-full aspect-video';
-            const fileInfo = item.querySelector('div:nth-child(2)');
-            fileInfo.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-1';
-        });
-    } else {
-        // Revert to current view (list or grid)
-        if (currentView === 'list') {
-            previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
-            previewItems.forEach(item => {
-                item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
-                const imgContainer = item.querySelector('div:first-child');
-                imgContainer.className = 'h-20 w-20 flex-shrink-0';
-                const fileInfo = item.querySelector('div:nth-child(2)');
-                fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-1';
-            });
-        } else {
-            previewGrid.className = 'w-full h-[536px] overflow-y-auto grid grid-cols-2 gap-4 p-2';
-            previewItems.forEach(item => {
-                item.className = 'preview-item aspect-square bg-white rounded-sm overflow-hidden relative';
-                const imgContainer = item.querySelector('div:first-child');
-                imgContainer.className = 'w-full h-full';
-                const fileInfo = item.querySelector('div:nth-child(2)');
-                fileInfo.className = 'absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 flex flex-col gap-1';
-            });
-        }
-    }
-}

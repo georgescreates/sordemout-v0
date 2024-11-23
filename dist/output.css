@@ -731,10 +731,6 @@ body {
   aspect-ratio: 1 / 1;
 }
 
-.aspect-video {
-  aspect-ratio: 16 / 9;
-}
-
 .h-1 {
   height: 0.25rem;
 }
@@ -781,6 +777,10 @@ body {
 
 .h-full {
   height: 100%;
+}
+
+.h-60 {
+  height: 15rem;
 }
 
 .min-h-\[5rem\] {
@@ -833,10 +833,6 @@ body {
 
 .max-w-7xl {
   max-width: 80rem;
-}
-
-.max-w-md {
-  max-width: 28rem;
 }
 
 .flex-1 {
@@ -1085,11 +1081,6 @@ body {
   background-color: rgb(156 163 175 / var(--tw-bg-opacity));
 }
 
-.bg-green-500 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(34 197 94 / var(--tw-bg-opacity));
-}
-
 .bg-lochmara-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(224 241 254 / var(--tw-bg-opacity));
@@ -1284,11 +1275,6 @@ body {
   color: rgb(22 163 74 / var(--tw-text-opacity));
 }
 
-.text-lochmara-500 {
-  --tw-text-opacity: 1;
-  color: rgb(12 156 235 / var(--tw-text-opacity));
-}
-
 .text-lochmara-600 {
   --tw-text-opacity: 1;
   color: rgb(0 132 215 / var(--tw-text-opacity));
@@ -1317,10 +1303,6 @@ body {
 .text-white {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity));
-}
-
-.underline {
-  text-decoration-line: underline;
 }
 
 .placeholder-silver-chalice-400::-moz-placeholder {
@@ -1379,6 +1361,14 @@ body {
 
 .transition-transform {
   transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -1493,11 +1483,6 @@ body {
 .hover\:text-lochmara-400:hover {
   --tw-text-opacity: 1;
   color: rgb(54 181 250 / var(--tw-text-opacity));
-}
-
-.hover\:text-lochmara-600:hover {
-  --tw-text-opacity: 1;
-  color: rgb(0 132 215 / var(--tw-text-opacity));
 }
 
 .hover\:text-lochmara-700:hover {
