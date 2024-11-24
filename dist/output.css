@@ -623,6 +623,10 @@ body {
   position: relative;
 }
 
+.inset-0 {
+  inset: 0px;
+}
+
 .-bottom-6 {
   bottom: -1.5rem;
 }
@@ -661,6 +665,14 @@ body {
 
 .top-2 {
   top: 0.5rem;
+}
+
+.right-4 {
+  right: 1rem;
+}
+
+.top-4 {
+  top: 1rem;
 }
 
 .z-10 {
@@ -707,8 +719,16 @@ body {
   margin-top: 1rem;
 }
 
+.mt-10 {
+  margin-top: 2.5rem;
+}
+
 .block {
   display: block;
+}
+
+.inline-block {
+  display: inline-block;
 }
 
 .flex {
@@ -759,6 +779,10 @@ body {
   height: 1.5rem;
 }
 
+.h-60 {
+  height: 15rem;
+}
+
 .h-\[500px\] {
   height: 500px;
 }
@@ -779,8 +803,16 @@ body {
   height: 100%;
 }
 
-.h-60 {
-  height: 15rem;
+.h-96 {
+  height: 24rem;
+}
+
+.max-h-\[70vh\] {
+  max-height: 70vh;
+}
+
+.max-h-\[80vh\] {
+  max-height: 80vh;
 }
 
 .min-h-\[5rem\] {
@@ -823,6 +855,18 @@ body {
   width: 100%;
 }
 
+.w-3\/4 {
+  width: 75%;
+}
+
+.w-auto {
+  width: auto;
+}
+
+.w-\[calc\(100\%-48px\)\] {
+  width: calc(100% - 48px);
+}
+
 .min-w-\[120px\] {
   min-width: 120px;
 }
@@ -833,6 +877,10 @@ body {
 
 .max-w-7xl {
   max-width: 80rem;
+}
+
+.max-w-4xl {
+  max-width: 56rem;
 }
 
 .flex-1 {
@@ -967,6 +1015,12 @@ body {
   margin-bottom: calc(0.5rem * var(--tw-space-y-reverse));
 }
 
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+}
+
 .overflow-hidden {
   overflow: hidden;
 }
@@ -999,6 +1053,10 @@ body {
 
 .rounded-sm {
   border-radius: 0.125rem;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
 }
 
 .border {
@@ -1054,6 +1112,11 @@ body {
 .border-silver-chalice-300 {
   --tw-border-opacity: 1;
   border-color: rgb(200 200 200 / var(--tw-border-opacity));
+}
+
+.border-silver-chalice-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(153 153 153 / var(--tw-border-opacity));
 }
 
 .bg-black {
@@ -1120,6 +1183,15 @@ body {
   --tw-bg-opacity: 0.5;
 }
 
+.bg-opacity-80 {
+  --tw-bg-opacity: 0.8;
+}
+
+.object-contain {
+  -o-object-fit: contain;
+     object-fit: contain;
+}
+
 .object-cover {
   -o-object-fit: cover;
      object-fit: cover;
@@ -1139,6 +1211,10 @@ body {
 
 .p-8 {
   padding: 2rem;
+}
+
+.p-6 {
+  padding: 1.5rem;
 }
 
 .px-2 {
@@ -1189,6 +1265,11 @@ body {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
+}
+
+.px-6 {
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 .pb-3 {
@@ -1305,6 +1386,11 @@ body {
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
+.text-gray-400 {
+  --tw-text-opacity: 1;
+  color: rgb(156 163 175 / var(--tw-text-opacity));
+}
+
 .placeholder-silver-chalice-400::-moz-placeholder {
   --tw-placeholder-opacity: 1;
   color: rgb(166 166 166 / var(--tw-placeholder-opacity));
@@ -1337,8 +1423,22 @@ body {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-xl {
+  --tw-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored: 0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .filter {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
+}
+
+.transition {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 .transition-all {
@@ -1361,14 +1461,6 @@ body {
 
 .transition-transform {
   transition-property: transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-.transition {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -1470,6 +1562,10 @@ body {
   background-color: rgb(6 83 134 / var(--tw-bg-opacity));
 }
 
+.hover\:bg-opacity-100:hover {
+  --tw-bg-opacity: 1;
+}
+
 .hover\:text-gray-700:hover {
   --tw-text-opacity: 1;
   color: rgb(55 65 81 / var(--tw-text-opacity));
@@ -1493,6 +1589,11 @@ body {
 .hover\:text-white:hover {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity));
+}
+
+.hover\:text-gray-800:hover {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity));
 }
 
 .focus\:border-lochmara-400:focus {

@@ -143,36 +143,16 @@
                         </h2>
                     </div>
                     <div class="right-section-part w-full">
-                        <!-- Preview Controls -->
-                        <div class="w-full h-auto flex items-center justify-between">
-                            <!-- Left side: View toggle -->
-                            <div class="flex items-center gap-x-1 bg-lochmara-100 p-1 rounded">
-                                <button id="list-view-btn" class="p-2 rounded transition-all duration-200" aria-label="List View">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                                    </svg>
-                                </button>
-                                <button id="grid-view-btn" class="p-2 rounded transition-all duration-200">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16v8H4zM4 18h16" />
-                                     </svg>
-                                </button>
+                        <div class="flex items-center justify-between gap-x-4">
+                            <div class="flex items-center gap-x-2">
+                                <input type="checkbox" id="select-all" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                <label for="select-all" class="text-sm text-gray-700">Select All</label>
                             </div>
-
-                            <!-- Right side: Select All -->
-                            <div class="flex items-center gap-x-4">
-                                <div class="flex items-center gap-x-2">
-                                    <input type="checkbox" id="select-all" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                                    <label for="select-all" class="text-sm text-gray-700">Select All</label>
-                                </div>
-                                <div class="flex items-center gap-x-2">
-                                    
-                                    <div id="stack-mode-container" class="relative inline-flex items-center gap-x-2 cursor-pointer">
-                                        <input type="checkbox" id="stack-mode-toggle" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-silver-chalice-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lochmara-500"></div>
-                                        <label for="stack-mode-toggle" class="text-sm text-gray-700">Stack Mode</label>
-                                    </div>
-                                    
+                            <div class="flex items-center gap-x-2">
+                                <div id="stack-mode-container" class="relative inline-flex items-center gap-x-2 cursor-pointer">
+                                    <input type="checkbox" id="stack-mode-toggle" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-silver-chalice-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-lochmara-500"></div>
+                                    <label for="stack-mode-toggle" class="text-sm text-gray-700">Stack Mode</label>
                                 </div>
                             </div>
                         </div>
@@ -237,6 +217,34 @@
                 </svg>
                 Settings
             </button>
+        </div>
+    </div>
+
+    <div id="preview-modal" class="fixed inset-0 z-50 hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+        
+        <!-- Modal content centered with padding -->
+        <div class="relative px-6 h-full flex items-center justify-center">
+            <div class="bg-white rounded-lg overflow-hidden p-4 flex flex-col gap-4">
+                <!-- Image container with close button -->
+                <div class="relative">
+                    <img id="modal-image" class="max-h-[80vh] object-contain" src="" alt="Preview">
+                    <!-- Close button with semi-transparent background -->
+                    <button id="close-modal" class="absolute top-4 right-4 p-2 rounded-full bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-600 hover:text-gray-800 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Info section below image -->
+                <div id="modal-info" class="bg-white inline-block flex flex-col gap-2">
+                    <h3 id="modal-filename" class="text-xl font-bold"></h3>
+                    <div id="modal-progress" class="w-full"></div>
+                    <div id="modal-status" class="flex justify-between text-sm text-gray-500"></div>
+                </div>
+            </div>
         </div>
     </div>
     

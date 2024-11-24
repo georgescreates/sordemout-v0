@@ -102,7 +102,7 @@ function validateFile(file) {
 function createPreviewItem(file, validation) {
     const previewItem = document.createElement('div');
     previewItem.setAttribute('data-file-size', file.size);
-    previewItem.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
+    previewItem.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative cursor-pointer hover:bg-gray-50';
 
     // Checkbox container
     const checkboxContainer = document.createElement('div');
@@ -204,6 +204,12 @@ function createPreviewItem(file, validation) {
         });
     }
 
+    // Add click hint before final return
+    const clickHint = document.createElement('span');
+    clickHint.className = 'absolute right-2 top-2 text-xs text-gray-400';
+    clickHint.textContent = 'Click to preview';
+    previewItem.appendChild(clickHint);
+
     return { previewItem, progressFill, statusText };
 }
 
@@ -222,7 +228,7 @@ function handleFiles(files) {
     previewGrid.classList.remove('hidden');
     
     // Only set base classes
-    previewGrid.className = 'w-full h-[536px] overflow-y-auto';
+    previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-4';
 
     // Clear existing items if stack mode is OFF
     if (!isStackMode) {
@@ -232,23 +238,23 @@ function handleFiles(files) {
     files.forEach(file => {
         const validation = validateFile(file);
         const { previewItem, progressFill, statusText } = createPreviewItem(file, validation);
-
+    
+        // Add modal click handler
+        addModalClickHandler(previewItem);
+    
         // Add to grid
         if (isStackMode) {
             previewGrid.insertBefore(previewItem, previewGrid.firstChild);
         } else {
             previewGrid.appendChild(previewItem);
         }
-
+    
         if (validation.valid) {
             simulateProgress(progressFill, statusText, previewItem);
         } else {
             showErrorToast(validation.error);
         }
     });
-
-    // Apply current view layout
-    toggleView(currentView);
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
@@ -376,18 +382,8 @@ const urlPatterns = {
 };
 
 // State
-let currentView = 'list';
 let currentUrlType = 'pin'; // Default to Pinterest Pin
 let isDropdownOpen = false;
-
-// Add view toggle functionality
-listViewBtn.addEventListener('click', () => toggleView('list'));
-gridViewBtn.addEventListener('click', () => toggleView('grid'));
-
-// Initialize the view on page load
-document.addEventListener('DOMContentLoaded', () => {
-    updateButtonStyles();
-});
 
 // Dropdown functionality
 dropdownButton.addEventListener('click', (e) => {
@@ -430,98 +426,6 @@ document.addEventListener('keydown', (e) => {
         isDropdownOpen = false;
     }
 });
-
-function toggleView(view) {
-    if (currentView === view) return;
-    currentView = view;
-    updateButtonStyles();
-    
-    const previewItems = previewGrid.querySelectorAll('.preview-item');
-    const hasItems = previewItems.length > 0;
-    
-    if (!hasItems) {
-        emptyState.classList.remove('hidden');
-        previewGrid.classList.add('hidden');
-        return;
-    }
-
-    emptyState.classList.add('hidden');
-    previewGrid.classList.remove('hidden');
-
-    // Base container styles remain the same
-    previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-2';
-
-    if (view === 'list') {
-        // Compact View (row layout)
-        previewItems.forEach(item => {
-            item.className = 'preview-item h-20 min-h-[5rem] flex items-center w-full bg-white rounded-sm overflow-hidden relative';
-            
-            const imgContainer = item.querySelector('div:first-child');
-            imgContainer.className = 'h-20 w-20 flex-shrink-0';
-            
-            const fileInfo = item.querySelector('div:nth-child(2)');
-            fileInfo.className = 'flex-1 h-20 px-4 flex flex-col justify-center gap-2';
-            
-            // Update text colors for compact view
-            const statusText = item.querySelector('.status-text');
-            const fileSize = item.querySelector('.text-xs:last-child');
-            if (statusText) statusText.className = 'status-text text-gray-500';
-            if (fileSize) fileSize.className = 'text-xs text-gray-500';
-        });
-    } else {
-        // Expanded View (column layout)
-        previewItems.forEach(item => {
-            item.className = 'preview-item flex flex-col w-full bg-white rounded-sm overflow-hidden relative transition-all duration-300';
-            
-            const imgContainer = item.querySelector('div:first-child');
-            imgContainer.className = 'w-full h-60 relative';
-            
-            const fileInfo = item.querySelector('div:nth-child(2)');
-            fileInfo.className = 'w-full p-4 flex flex-col gap-2';
-            
-            // Update text colors for expanded view
-            const statusText = item.querySelector('.status-text');
-            const fileSize = item.querySelector('.text-xs:last-child');
-            if (statusText) statusText.className = 'status-text text-gray-500';
-            if (fileSize) fileSize.className = 'text-xs text-gray-500';
-        });
-    }
-
-    // Maintain states after transition
-    previewItems.forEach(item => {
-        const progressFill = item.querySelector('div[data-status]');
-        const statusText = item.querySelector('.status-text');
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        
-        // Maintain the current status
-        if (progressFill && statusText) {
-            const status = progressFill.getAttribute('data-status');
-            if (status === 'ready' && checkbox?.checked) {
-                setReadyStatus(statusText, item);
-            } else if (status === 'aborted' || !checkbox?.checked) {
-                setAbortedStatus(statusText, item);
-            }
-        }
-    });
-
-}
-
-function updateButtonStyles() {
-    // Reset both buttons to default state
-    [listViewBtn, gridViewBtn].forEach(btn => {
-        btn.style.backgroundColor = '';
-        btn.style.color = '#072c4a';
-    });
-    
-    // Set active button style
-    if (currentView === 'list') {
-        listViewBtn.style.backgroundColor = '#0084d7';
-        listViewBtn.style.color = 'white';
-    } else {
-        gridViewBtn.style.backgroundColor = '#0084d7';
-        gridViewBtn.style.color = 'white';
-    }
-}
 
 function handleSelectAll(checked) {
     const previewItems = document.querySelectorAll('.preview-item');
@@ -1265,10 +1169,21 @@ async function handleImageUrls(urls) {
         } else {
             previewGrid.appendChild(preview);
         }
+
+        // Add click hint
+        const clickHint = document.createElement('span');
+        clickHint.className = 'absolute right-2 top-2 text-xs text-gray-400';
+        clickHint.textContent = 'Click to preview';
+        preview.appendChild(clickHint);
+
+        // Add cursor pointer and hover effect to preview item
+        preview.classList.add('cursor-pointer', 'hover:bg-gray-50');
+
+        // Add modal click handler
+        addModalClickHandler(preview);
     }
 
     // Apply current view layout after adding all items
-    toggleView(currentView);
     updateProcessButtonState();
 }
 
@@ -1450,4 +1365,72 @@ stackModeContainer.addEventListener('click', (e) => {
     } else {
         stackModeToggle.nextElementSibling.classList.remove('bg-lochmara-600');
     }
+});
+
+// Add modal click handler to preview item
+function addModalClickHandler(previewItem) {
+    // Add click handler to the entire preview item
+    previewItem.addEventListener('click', (e) => {
+        // Prevent modal from opening when clicking these elements
+        if (e.target.type === 'checkbox' || 
+            e.target.closest('.status-text') ||
+            e.target.closest('.progress-container')) {
+            return;
+        }
+        openPreviewModal(previewItem);
+    });
+}
+
+// Modal functions
+function openPreviewModal(previewItem) {
+    const modal = document.getElementById('preview-modal');
+    const modalImage = document.getElementById('modal-image');
+    const modalFilename = document.getElementById('modal-filename');
+    const modalProgress = document.getElementById('modal-progress');
+    const modalStatus = document.getElementById('modal-status');
+    
+    // Get data from preview item
+    const img = previewItem.querySelector('img');
+    const filename = previewItem.querySelector('.text-base.font-bold').textContent;
+    const progressBar = previewItem.querySelector('.h-1.bg-gray-200').cloneNode(true);
+    const status = previewItem.querySelector('.status-text').parentElement.cloneNode(true);
+    
+    // Set modal content
+    modalImage.src = img.src;
+    modalFilename.textContent = filename;
+    modalProgress.innerHTML = '';
+    modalProgress.appendChild(progressBar);
+    modalStatus.innerHTML = '';
+    modalStatus.appendChild(status);
+    
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function closePreviewModal() {
+    const modal = document.getElementById('preview-modal');
+    modal.classList.add('hidden');
+}
+
+// Initialize modal event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('preview-modal');
+    const closeBtn = document.getElementById('close-modal');
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closePreviewModal();
+        }
+    });
+    
+    // Close on button click
+    closeBtn.addEventListener('click', closePreviewModal);
+    
+    // Close on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            closePreviewModal();
+        }
+    });
 });
