@@ -215,6 +215,11 @@ function createPreviewItem(file, validation) {
 
 // Function to handle files
 function handleFiles(files) {
+    // First check if we actually have files to process
+    if (!files || files.length === 0) {
+        return; // Exit if no files were selected
+    }
+
     const emptyState = document.getElementById('empty-state');
     const previewGrid = document.getElementById('preview-grid');
 
@@ -228,10 +233,10 @@ function handleFiles(files) {
     previewGrid.classList.remove('hidden');
     
     // Only set base classes
-    previewGrid.className = 'w-full h-[536px] overflow-y-auto flex flex-col space-y-4';
+    previewGrid.className = 'w-full h-[552px] overflow-y-auto flex flex-col space-y-4';
 
     // Clear existing items if stack mode is OFF
-    if (!isStackMode) {
+    if (!isStackMode && files.length > 0) {
         previewGrid.innerHTML = '';
     }
 
@@ -1037,6 +1042,9 @@ async function handleImageUrls(urls) {
     // Show preview grid if hidden
     emptyState.classList.add('hidden');
     previewGrid.classList.remove('hidden');
+
+    // Only set base classes
+    previewGrid.className = 'w-full h-[552px] overflow-y-auto flex flex-col space-y-4';
     
     if (!isStackMode) {
         previewGrid.innerHTML = '';
