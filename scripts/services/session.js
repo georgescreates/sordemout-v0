@@ -7,21 +7,19 @@ import { updateSessionStatsUI } from '../components/browse-files.js';
 async function createSession(type = 'guest') {
     const limits = {
         guest: {
-            duration: 30 * 60 * 1000,
+            duration: 30 * 60 * 1000, // 30 minutes
+            cooldown: 60 * 60 * 1000, // 60 minutes
             maxFiles: 30,
             maxSize: 150 * 1024 * 1024
-        },
-        free: {
-            duration: 60 * 60 * 1000,
-            maxFiles: 50,
-            maxSize: 500 * 1024 * 1024
         }
     };
 
+    const now = Date.now();
     const session = {
         type,
         created_at: serverTimestamp(),
-        expires_at: new Date(Date.now() + limits[type].duration),
+        expires_at: new Date(now + limits[type].duration),
+        cooldown_ends_at: new Date(now + limits[type].duration + limits[type].cooldown),
         usage: {
             files_count: 0,
             total_size: 0
@@ -29,8 +27,13 @@ async function createSession(type = 'guest') {
         files: {}
     };
 
-    const docRef = await addDoc(collection(db, "sessions"), session);
-    return docRef.id;
+    try {
+        const docRef = await addDoc(collection(db, "sessions"), session);
+        return docRef.id;
+    } catch (error) {
+        console.error("Error creating session:", error);
+        throw error;
+    }
 }
 
 // Check if session is valid
@@ -44,7 +47,12 @@ async function checkSession(sessionId) {
     const now = new Date();
     const expiresAt = session.expires_at.toDate();
     
-    return now > expiresAt ? null : session;
+    if (now > expiresAt) {
+        localStorage.removeItem('sessionId');  // Clear session from localStorage
+        return null;
+    }
+    
+    return session;
 }
 
 // Handle batch upload session
@@ -80,4 +88,20 @@ async function updateSessionFiles(sessionId, fileInfo) {
     await batch.commit();
 }
 
-export { createSession, checkSession, handleUploadBatch, updateSessionFiles };
+async function isSessionActive() {
+    const sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) return false;
+
+    const sessionRef = doc(db, "sessions", sessionId);
+    const sessionSnap = await getDoc(sessionRef);
+    
+    if (!sessionSnap.exists()) return false;
+
+    const session = sessionSnap.data();
+    const now = new Date();
+    const expiresAt = session.expires_at.toDate();
+
+    return now < expiresAt;
+}
+
+export { createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive };

@@ -1,5 +1,5 @@
 import { uploadFileToStorage } from '../services/storage.js';
-import { handleUploadBatch, updateSessionFiles } from '../services/session.js';
+import { handleUploadBatch, updateSessionFiles, isSessionActive } from '../services/session.js';
 import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from '../firebase-config.js';
 import { getDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -62,18 +62,30 @@ dropZone.addEventListener('dragleave', () => {
     dropZone.classList.remove('bg-silver-chalice-50');
 });
 
-dropZone.addEventListener('drop', (e) => {
+dropZone.addEventListener('drop', async (e) => {
     e.preventDefault();
-    // dropZone.classList.remove('border-lochmara-500');
+
+    // Check session before handling files
+    if (!await isSessionActive()) {
+        showErrorToast("Cannot upload files - session inactive or in cooldown");
+        return;
+    }
+
     dropZone.classList.remove('bg-silver-chalice-50');
     const files = Array.from(e.dataTransfer.files);
-    handleFiles(files);
+    await handleFiles(files);
 });
 
 // Handle file selection
-fileInput.addEventListener('change', (e) => {
+fileInput.addEventListener('change', async (e) => {
+    // Check session before handling files
+    if (!await isSessionActive()) {
+        showErrorToast("Cannot upload files - session inactive or in cooldown");
+        return;
+    }
+
     const files = Array.from(e.target.files);
-    handleFiles(files);
+    await handleFiles(files);
 });
 
 // Function to format file size
@@ -221,7 +233,11 @@ function createPreviewItem(file, validation) {
 }
 
 // Function to handle files
-function handleFiles(files) {
+async function handleFiles(files) {
+    if (!await isSessionActive()) {
+        showErrorToast("Cannot upload files - session inactive or in cooldown");
+        return;
+    }
     // First check if we actually have files to process
     if (!files || files.length === 0) {
         return; // Exit if no files were selected
@@ -968,6 +984,11 @@ async function extractImagesFromLink(url) {
         return;
     }
 
+    if (!await isSessionActive()) {
+        showErrorToast("Cannot import images - session inactive or in cooldown");
+        return;
+    }
+
     setImportButtonLoading(true);
 
     try {
@@ -1425,9 +1446,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     //Update session stats
     updateSessionStatsUI();
+
+    setInterval(updateSessionStatsUI, 1000);
 });
 
 processButton.addEventListener('click', async () => {
+    if (!await isSessionActive()) {
+        showErrorToast("Cannot process files - session has expired");
+        return;
+    }
+
     const previewItems = Array.from(document.querySelectorAll('.preview-item'))
         .filter(item => item.querySelector('input[type="checkbox"]:checked'));
  
@@ -1482,14 +1510,19 @@ processButton.addEventListener('click', async () => {
             });
         });
  
+        // Wait for all uploads to complete
         await Promise.all(uploadPromises);
+
+        // Wait a brief moment for Firestore updates to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Update stats
+        await updateSessionStatsUI();
+
         // Clear preview grid after successful upload
         previewGrid.innerHTML = '';
         emptyState.classList.remove('hidden');
         previewGrid.classList.add('hidden');
-
-        // Update stats
-        await updateSessionStatsUI();
     } catch (error) {
         console.error('Some uploads failed:', error);
     } finally {
@@ -1497,31 +1530,86 @@ processButton.addEventListener('click', async () => {
     }
  });
 
-async function updateSessionStatsUI() {
+ async function updateSessionStatsUI() {
     const sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) return;
-
+    const expiryParagraph = document.getElementById('session-expiry-p');
+    const cooldownParagraph = document.getElementById('session-cooldown-p');
+    const expiryElement = document.getElementById('session-expires-delay');
+    const cooldownElement = document.getElementById('session-cooldown-delay');
+    const filesCountElement = document.getElementById('session-upload-count-files');
+    const sizeElement = document.getElementById('session-upload-count-size');
+    
+    if (!sessionId) {
+        // Reset all stats when no session
+        if (filesCountElement) filesCountElement.textContent = '00/50';
+        if (sizeElement) sizeElement.textContent = '0.00MB/250MB';
+        if (expiryParagraph) expiryParagraph.classList.add('hidden');
+        if (cooldownParagraph) cooldownParagraph.classList.add('hidden');
+        return;
+    }
+ 
     const sessionRef = doc(db, "sessions", sessionId);
     const sessionSnap = await getDoc(sessionRef);
-
+    
     if (sessionSnap.exists()) {
         const session = sessionSnap.data();
-        
-        // Update files count
-        const filesCountElement = document.getElementById('session-upload-count-files');
-        if (filesCountElement) {
-            filesCountElement.textContent = `${String(session.usage.files_count).padStart(2, '0')}/50`;
-        }
-        
-        // Update size (convert bytes to MB)
-        const sizeElement = document.getElementById('session-upload-count-size');
-        if (sizeElement) {
-            const sizeMB = (session.usage.total_size / (1024 * 1024)).toFixed(2);
-            sizeElement.textContent = `${sizeMB}MB/250MB`;
+        const now = new Date();
+        const expiresAt = session.expires_at.toDate();
+        const cooldownEndsAt = session.cooldown_ends_at ? session.cooldown_ends_at.toDate() : new Date(expiresAt.getTime() + (60 * 60 * 1000));
+ 
+        if (now > expiresAt) {
+            // Session expired
+            if (now < cooldownEndsAt) {
+                // In cooldown period
+                const cooldownLeft = cooldownEndsAt - now;
+                const cooldownMinutes = Math.floor(cooldownLeft / 60000);
+                const cooldownSeconds = Math.floor((cooldownLeft % 60000) / 1000);
+                
+                // Show cooldown, hide expiry
+                if (cooldownElement) {
+                    cooldownElement.textContent = `${String(cooldownMinutes).padStart(2, '0')}:${String(cooldownSeconds).padStart(2, '0')}`;
+                }
+                expiryParagraph.classList.add('hidden');
+                cooldownParagraph.classList.remove('hidden');
+            } else {
+                // Cooldown finished
+                if (expiryElement) {
+                    expiryElement.textContent = 'Ready for new session';
+                }
+                expiryParagraph.classList.remove('hidden');
+                cooldownParagraph.classList.add('hidden');
+            }
+            
+            // Reset usage stats
+            if (filesCountElement) filesCountElement.textContent = '00/50';
+            if (sizeElement) sizeElement.textContent = '0.00MB/250MB';
+            localStorage.removeItem('sessionId');
+            
+        } else {
+            // Active session
+            const timeLeft = expiresAt - now;
+            const minutesLeft = Math.floor(timeLeft / 60000);
+            const secondsLeft = Math.floor((timeLeft % 60000) / 1000);
+            
+            // Show expiry, hide cooldown
+            if (expiryElement) {
+                expiryElement.textContent = `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+            }
+            expiryParagraph.classList.remove('hidden');
+            cooldownParagraph.classList.add('hidden');
+ 
+            // Update usage stats
+            if (filesCountElement) {
+                filesCountElement.textContent = `${String(session.usage.files_count).padStart(2, '0')}/50`;
+            }
+            
+            if (sizeElement) {
+                const sizeMB = (session.usage.total_size / (1024 * 1024)).toFixed(2);
+                sizeElement.textContent = `${sizeMB}MB/250MB`;
+            }
         }
     }
-}
-
+ }
 export {updateSessionStatsUI};
 
 // function updateUploadUI(previewItem, progress) {
