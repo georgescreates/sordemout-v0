@@ -90,18 +90,63 @@ async function updateSessionFiles(sessionId, fileInfo) {
 
 async function isSessionActive() {
     const sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) return false;
+    if (!sessionId) {
+        // No session - ready for new one
+        return true;
+    }
 
     const sessionRef = doc(db, "sessions", sessionId);
     const sessionSnap = await getDoc(sessionRef);
     
-    if (!sessionSnap.exists()) return false;
+    if (!sessionSnap.exists()) {
+        // Session doesn't exist in DB, ready for new one
+        localStorage.removeItem('sessionId');
+        return true;
+    }
 
     const session = sessionSnap.data();
     const now = new Date();
     const expiresAt = session.expires_at.toDate();
+    const cooldownEndsAt = session.cooldown_ends_at.toDate();
 
+    if (now > expiresAt && now > cooldownEndsAt) {
+        // Session expired and cooldown finished
+        localStorage.removeItem('sessionId');
+        return true;
+    }
+
+    // Return true only if session is still active
     return now < expiresAt;
 }
 
-export { createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive };
+// function to check session limits
+async function canAddFiles(fileCount, totalSize) {
+    const sessionId = localStorage.getItem('sessionId');
+    if (!sessionId) return {
+        withinLimits: true,
+        remainingFiles: 30,
+        remainingSize: 150 * 1024 * 1024
+    };
+
+    const sessionRef = doc(db, "sessions", sessionId);
+    const sessionSnap = await getDoc(sessionRef);
+    
+    if (!sessionSnap.exists()) return {
+        withinLimits: true,
+        remainingFiles: 30,
+        remainingSize: 150 * 1024 * 1024
+    };
+
+    const session = sessionSnap.data();
+    const currentCount = session.usage.files_count || 0;
+    const currentSize = session.usage.total_size || 0;
+
+    return {
+        withinLimits: currentCount + fileCount <= 30 && 
+                      (currentSize + totalSize) <= 150 * 1024 * 1024,
+        remainingFiles: 30 - currentCount,
+        remainingSize: (150 * 1024 * 1024) - currentSize
+    };
+}
+
+export { createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles };

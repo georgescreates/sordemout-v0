@@ -1,6 +1,6 @@
 import { uploadFileToStorage } from '../services/storage.js';
-import { handleUploadBatch, updateSessionFiles, isSessionActive } from '../services/session.js';
-import { collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles } from '../services/session.js';
+import { collection, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from '../firebase-config.js';
 import { getDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { createSession } from '../services/session.js';
@@ -1317,7 +1317,10 @@ importButton.addEventListener('click', () => {
 
 // Function to update process button state
 function updateProcessButtonState() {
-    const processButton = document.querySelector('#upl-client-firebase-btn');
+    const processButton = document.getElementById('upl-client-firebase-btn');
+    const processText = document.getElementById('process-text');
+    const selectedSessionText = document.getElementById('selected-session-text');
+
     if (!processButton) return;
 
     const fileItems = document.querySelectorAll('.preview-item');
@@ -1326,7 +1329,6 @@ function updateProcessButtonState() {
         const checkbox = item.querySelector('input[type="checkbox"]');
         const status = progressFill?.getAttribute('data-status');
         
-        // Must be ready, checked, and not rejected
         return status === 'ready' && 
                checkbox?.checked && 
                !checkbox?.disabled && 
@@ -1334,14 +1336,20 @@ function updateProcessButtonState() {
     });
 
     const count = readyFiles.length;
-    processButton.innerHTML = `Process ${count > 2 ? `${count}` : ''} Selected Files`;
+    // Update process text based on count
+    processText.textContent = count > 0 
+        ? `Process ${count} Selected ${count === 1 ? 'File' : 'Files'} in` 
+        : 'Process Selected Files in';
 
+    // Handle button state
     if (count >= 3) {
-        processButton.classList.remove('cursor-not-allowed', 'opacity-50');
+        processButton.classList.remove('opacity-50', 'cursor-not-allowed');
         processButton.disabled = false;
+        processButton.title = '';
     } else {
-        processButton.classList.add('cursor-not-allowed', 'opacity-50');
+        processButton.classList.add('opacity-50', 'cursor-not-allowed');
         processButton.disabled = true;
+        processButton.title = 'Select at least 3 files to process';
     }
 }
 
@@ -1448,6 +1456,9 @@ document.addEventListener('DOMContentLoaded', () => {
     updateSessionStatsUI();
 
     setInterval(updateSessionStatsUI, 1000);
+    updateProcessButtonState();
+    updateUIState();
+    setInterval(updateUIState, 10000);
 });
 
 processButton.addEventListener('click', async () => {
@@ -1578,13 +1589,13 @@ processButton.addEventListener('click', async () => {
                 }
                 expiryParagraph.classList.remove('hidden');
                 cooldownParagraph.classList.add('hidden');
+
+                localStorage.removeItem('sessionId');
             }
             
             // Reset usage stats
             if (filesCountElement) filesCountElement.textContent = '00/50';
-            if (sizeElement) sizeElement.textContent = '0.00MB/250MB';
-            localStorage.removeItem('sessionId');
-            
+            if (sizeElement) sizeElement.textContent = '0.00MB/250MB';            
         } else {
             // Active session
             const timeLeft = expiresAt - now;
@@ -1611,6 +1622,295 @@ processButton.addEventListener('click', async () => {
     }
  }
 export {updateSessionStatsUI};
+
+// function to update UI based on session state
+async function updateUIState() {
+    // Get all UI elements
+    const elements = {
+        dropZone: document.getElementById('drop-zone'),
+        linkInput: document.getElementById('link-input'),
+        importButton: document.getElementById('import-link-btn'),
+        processButton: document.getElementById('upl-client-firebase-btn'),
+        processText: document.getElementById('process-text'),
+        selectedSessionText: document.getElementById('selected-session-text'),
+        dropdownMenu: document.getElementById('session-dropdown-menu')
+    };
+
+    // Get session state
+    const isActive = await isSessionActive();
+    const sessionLimits = isActive ? await canAddFiles(0, 0) : null;
+
+    // Determine UI state
+    const state = getUIState(isActive, sessionLimits);
+
+    // Update UI based on state
+    updateDropZone(elements.dropZone, state);
+    updateProcessButton(elements, state);
+    updateInputSection(elements, state);
+    
+    // Hide dropdown if inactive or limits reached
+    if (!state.isActive || !state.withinLimits) {
+        elements.dropdownMenu.classList.add('hidden');
+    }
+}
+
+function getUIState(isActive, sessionLimits) {
+    if (!isActive) {
+        return {
+            isActive: false,
+            withinLimits: false,
+            message: {
+                title: 'Upload disabled during cooldown',
+                subtitle: 'Check timer for next available session'
+            },
+            processState: {
+                text: 'Processing unavailable',
+                sessionText: 'Session cooldown',
+                title: 'Wait for session cooldown to end'
+            }
+        };
+    }
+
+    if (!sessionLimits.withinLimits) {
+        const remainingMB = (sessionLimits.remainingSize / (1024 * 1024)).toFixed(2);
+        return {
+            isActive: true,
+            withinLimits: false,
+            message: {
+                title: 'Session limits reached',
+                files: sessionLimits.remainingFiles,
+                space: remainingMB
+            },
+            processState: {
+                text: 'Cannot process more files',
+                sessionText: 'Limits reached',
+                title: `Files: ${sessionLimits.remainingFiles} remaining, Space: ${remainingMB}MB remaining`
+            }
+        };
+    }
+
+    return {
+        isActive: true,
+        withinLimits: true
+    };
+}
+
+function updateDropZone(dropZone, state) {
+    if (!state.isActive || !state.withinLimits) {
+        dropZone.classList.add('opacity-50', 'pointer-events-none');
+        
+        if (!state.withinLimits && state.message.files !== undefined) {
+            dropZone.innerHTML = `
+                <div class="text-silver-chalice-400 text-center">
+                    <p>${state.message.title}</p>
+                    <p class="text-sm">Files: ${state.message.files} remaining</p>
+                    <p class="text-sm">Space: ${state.message.space}MB remaining</p>
+                </div>
+            `;
+        } else {
+            dropZone.innerHTML = `
+                <div class="text-silver-chalice-400 text-center">
+                    <p>${state.message.title}</p>
+                    <p class="text-sm">${state.message.subtitle}</p>
+                </div>
+            `;
+        }
+    } else {
+        dropZone.classList.remove('opacity-50', 'pointer-events-none');
+        // Restore original drop zone content here
+    }
+}
+
+function updateProcessButton(elements, state) {
+    const { processButton, processText, selectedSessionText } = elements;
+
+    if (!state.isActive || !state.withinLimits) {
+        processButton.disabled = true;
+        processButton.classList.add('opacity-50', 'cursor-not-allowed');
+        processText.textContent = state.processState.text;
+        selectedSessionText.textContent = state.processState.sessionText;
+        processButton.title = state.processState.title;
+    } else {
+        updateProcessButtonState();
+    }
+}
+
+function updateInputSection(elements, state) {
+    const { linkInput, importButton } = elements;
+    const isDisabled = !state.isActive || !state.withinLimits;
+
+    linkInput.disabled = isDisabled;
+    importButton.disabled = isDisabled;
+
+    if (isDisabled) {
+        linkInput.classList.add('bg-gray-100');
+        importButton.classList.add('opacity-50');
+    } else {
+        linkInput.classList.remove('bg-gray-100');
+        importButton.classList.remove('opacity-50');
+    }
+}
+
+// Get DOM elements
+const sessionDropDownMenu = document.getElementById('session-dropdown-menu');
+const selectedSessionText = document.getElementById('selected-session-text');
+const activeSessionsList = document.getElementById('active-sessions-list');
+
+// Track selected session
+let selectedSessionId = null;
+
+// Toggle dropdown when clicking process button
+processButton.addEventListener('click', (e) => {
+    e.stopPropagation();
+    sessionDropDownMenu.classList.toggle('hidden');
+    updateSessionsList();
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', () => {
+    sessionDropDownMenu.classList.add('hidden');
+});
+
+// Function to create session element
+function createSessionElement(session) {
+    const { id, timeRemaining, usage } = session;
+    
+    // Calculate if session is selectable
+    const timeRemainingMinutes = Math.floor(timeRemaining / 60000);
+    const queueSize = calculateQueueSize();
+    const isSelectable = timeRemainingMinutes > 3 && 
+                        canSessionAcceptQueue(session, queueSize);
+
+    const sessionDiv = document.createElement('div');
+    sessionDiv.className = `px-4 py-2 text-sm text-gray-700 ${
+        isSelectable ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+    }`;
+    
+    sessionDiv.innerHTML = `
+        <div class="flex flex-col gap-y-1">
+            <div class="flex justify-between items-center">
+                <span class="font-medium">Session ${id}</span>
+                <span class="${timeRemainingMinutes <= 3 ? 'text-froly-600' : 'text-gray-500'}">
+                    ${timeRemainingMinutes}m remaining
+                </span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500">
+                <span>${usage.files_count}/50 files</span>
+                <span>${(usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
+            </div>
+        </div>
+    `;
+
+    if (isSelectable) {
+        sessionDiv.addEventListener('click', () => selectSession(session));
+    } else {
+        const reason = timeRemainingMinutes <= 3 
+            ? 'Session expires soon'
+            : 'Insufficient capacity for selected files';
+        sessionDiv.setAttribute('title', reason);
+    }
+
+    return sessionDiv;
+}
+
+// Function to update sessions list
+async function updateSessionsList() {
+    activeSessionsList.innerHTML = '';
+    
+    try {
+        const activeSessions = await getActiveSessions();
+        
+        activeSessions.forEach(session => {
+            const sessionElement = createSessionElement(session);
+            activeSessionsList.appendChild(sessionElement);
+        });
+        
+        // Update selected session text
+        if (selectedSessionId) {
+            const selectedSession = activeSessions.find(s => s.id === selectedSessionId);
+            if (selectedSession) {
+                selectedSessionText.textContent = `Session ${selectedSession.id}`;
+            } else {
+                // Reset if selected session no longer exists
+                selectedSessionId = null;
+                selectedSessionText.textContent = 'New Session';
+            }
+        }
+    } catch (error) {
+        console.error('Error updating sessions list:', error);
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'px-4 py-2 text-sm text-froly-600 text-center';
+        errorDiv.textContent = 'Error loading sessions';
+        activeSessionsList.appendChild(errorDiv);
+    }
+}
+
+// Function to handle session selection
+function selectSession(session) {
+    selectedSessionId = session.id;
+    selectedSessionText.textContent = `Session ${session.id}`;
+    sessionDropDownMenu.classList.add('hidden');
+}
+
+// Helper functions
+function calculateQueueSize() {
+    const selectedItems = document.querySelectorAll('.preview-item input[type="checkbox"]:checked');
+    return Array.from(selectedItems).reduce((total, item) => {
+        const previewItem = item.closest('.preview-item');
+        return total + parseInt(previewItem.getAttribute('data-file-size'), 10);
+    }, 0);
+}
+
+// Don't forget to update these in your checkbox change handlers
+document.querySelectorAll('.preview-item input[type="checkbox"]').forEach(checkbox => {
+    checkbox.addEventListener('change', () => {
+        updateProcessButtonState();
+    });
+});
+
+function canSessionAcceptQueue(session, queueSize) {
+    const remainingStorage = (250 * 1024 * 1024) - session.usage.total_size;
+    const remainingFiles = 50 - session.usage.files_count;
+    const selectedCount = document.querySelectorAll('.preview-item input[type="checkbox"]:checked').length;
+    
+    return remainingStorage >= queueSize && remainingFiles >= selectedCount;
+}
+
+// Initial setup
+updateSessionsList();
+setInterval(updateSessionsList, 10000); // Update every 10 seconds
+
+async function getActiveSessions() {
+    try {
+        const now = new Date();
+        const sessionsRef = collection(db, "sessions");
+        const querySnapshot = await getDocs(sessionsRef);
+        const activeSessions = [];
+        
+        querySnapshot.forEach((doc) => {
+            const session = doc.data();
+            const expiresAt = session.expires_at.toDate();
+            
+            // Only include non-expired sessions
+            if (now < expiresAt) {
+                activeSessions.push({
+                    id: doc.id,
+                    timeRemaining: expiresAt - now,  // in milliseconds
+                    usage: session.usage,
+                    isProcessing: session.is_processing || false,
+                    expires_at: expiresAt
+                });
+            }
+        });
+
+        // Sort by expiry time (soonest first)
+        return activeSessions.sort((a, b) => a.timeRemaining - b.timeRemaining);
+
+    } catch (error) {
+        console.error("Error getting active sessions:", error);
+        throw error;
+    }
+}
 
 // function updateUploadUI(previewItem, progress) {
 //     const progressFill = previewItem.querySelector('[data-status]');

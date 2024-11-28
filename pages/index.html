@@ -172,11 +172,27 @@
                             <!-- Preview items will be added here dynamically -->
                         </div>
                     </div>
-                    <div class="right-section-part w-full">
+                    <div class="right-section-part w-full flex gap-x-4">
                         <div class="flex flex-col w-full items-center gap-y-1">
-                            <button class="process-button bg-white text-lochmara-600 border rounded border-lochmara-600 hover:bg-lochmara-600 hover:text-white px-5 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full font-medium" id="upl-client-firebase-btn">
-                                Process Selected Files
-                            </button>
+                            <!-- Combined Process Button and Session Selector -->
+                            <div class="relative w-full">
+                                <button class="w-full flex items-center justify-between bg-white text-lochmara-600 border rounded border-lochmara-600 hover:bg-lochmara-600 hover:text-white px-5 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium" id="upl-client-firebase-btn">
+                                    <span id="process-text">Process Selected Files in</span>
+                                    <div class="flex items-center gap-x-2 text-sm border-l pl-4 ml-4">
+                                        <span id="selected-session-text">New Session</span>
+                                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </button>
+                        
+                                <!-- Sessions Dropdown Menu -->
+                                <div id="session-dropdown-menu" class="absolute right-0 z-10 hidden w-64 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
+                                    <div id="active-sessions-list">
+                                        <!-- Sessions will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
                             <a href="http://" class="text-sm text-silver-chalice-400">Terms and conditions apply*</a>
                         </div>
                     </div>
