@@ -10,6 +10,10 @@ module.exports = {
       fontFamily: {
         'openSans': ['Open Sans'],
         'fredoka': ['Fredoka', 'sans-serif']
+      },
+      width: {
+        '100' : '25rem',
+        '120' : '30rem'
       }
     },
     extend : {

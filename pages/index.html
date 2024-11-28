@@ -176,18 +176,27 @@
                         <div class="flex flex-col w-full items-center gap-y-1">
                             <!-- Combined Process Button and Session Selector -->
                             <div class="relative w-full">
-                                <button class="w-full flex items-center justify-between bg-white text-lochmara-600 border rounded border-lochmara-600 hover:bg-lochmara-600 hover:text-white px-5 py-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium" id="upl-client-firebase-btn">
-                                    <span id="process-text">Process Selected Files in</span>
-                                    <div class="flex items-center gap-x-2 text-sm border-l pl-4 ml-4">
-                                        <span id="selected-session-text">New Session</span>
-                                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                        </svg>
+                                <div class="w-full flex items-center justify-between bg-white text-lochmara-600 border rounded border-lochmara-600">
+                                    <!-- Process Button Part -->
+                                    <button id="upl-client-firebase-btn" 
+                                            class="flex-1 px-5 py-3 hover:bg-lochmara-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium">
+                                        <span id="process-text">Process Selected Files in</span>
+                                    </button>
+                            
+                                    <!-- Session Selector Part (separate from process button) -->
+                                    <div class="border-l">
+                                        <button id="session-dropdown-btn"
+                                                class="flex items-center gap-x-2 px-4 py-3 hover:bg-lochmara-600 hover:text-white transition-colors">
+                                            <span id="selected-session-text">New Session</span>
+                                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
                                     </div>
-                                </button>
-                        
-                                <!-- Sessions Dropdown Menu -->
-                                <div id="session-dropdown-menu" class="absolute right-0 z-10 hidden w-64 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
+                                </div>
+                            
+                                <!-- Dropdown Menu -->
+                                <div id="session-dropdown-menu" class="absolute right-0 z-10 hidden w-96 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
                                     <div id="active-sessions-list">
                                         <!-- Sessions will be populated here -->
                                     </div>

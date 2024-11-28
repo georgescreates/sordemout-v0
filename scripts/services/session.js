@@ -19,11 +19,11 @@ async function createSession(type = 'guest') {
         type,
         created_at: serverTimestamp(),
         expires_at: new Date(now + limits[type].duration),
-        cooldown_ends_at: new Date(now + limits[type].duration + limits[type].cooldown),
         usage: {
             files_count: 0,
             total_size: 0
         },
+        preview_image: null,  // Will store the URL
         files: {}
     };
 
@@ -79,12 +79,23 @@ async function updateSessionFiles(sessionId, fileInfo) {
     const fileRef = collection(db, "sessions", sessionId, "files");
     batch.set(doc(fileRef), fileInfo);
     
-    // Update session counters
-    batch.update(sessionRef, {
+    // Get session data to check if preview exists
+    const sessionSnap = await getDoc(sessionRef);
+    const sessionData = sessionSnap.data();
+
+    // Update session data
+    const updates = {
         "usage.files_count": increment(1),
         "usage.total_size": increment(fileInfo.size)
-    });
+    };
 
+    // Set preview image if none exists or if this file is smaller
+    if (!sessionData.preview_image || fileInfo.size < sessionData.preview_image_size) {
+        updates.preview_image = fileInfo.storage_url;
+        updates.preview_image_size = fileInfo.size;
+    }
+
+    batch.update(sessionRef, updates);
     await batch.commit();
 }
 

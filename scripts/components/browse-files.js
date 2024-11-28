@@ -1461,7 +1461,14 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateUIState, 10000);
 });
 
-processButton.addEventListener('click', async () => {
+processButton.addEventListener('click', async (e) => {
+    e.stopPropagation(); // Prevent this from triggering document click
+
+    // Prevent multiple simultaneous session creations
+    if (isCreatingSession) {
+        return;
+    }
+
     if (!await isSessionActive()) {
         showErrorToast("Cannot process files - session has expired");
         return;
@@ -1471,13 +1478,25 @@ processButton.addEventListener('click', async () => {
         .filter(item => item.querySelector('input[type="checkbox"]:checked'));
  
     try {
-        // Check/create session
-        const session = await handleUploadBatch();
+        isCreatingSession = true;
+        let sessionId = selectedSessionId;
+
+        // Create or get session
+        if (!sessionId) {
+            sessionId = await createSession();
+            selectedSessionId = sessionId;
+            selectedSessionText.textContent = `${sessionId.substring(0, 3)}...${sessionId.slice(-3)}`;
+            await updateSessionsList();
+        }
+
+        // Use the session we just created/selected
+        const session = sessionId; // No need to call handleUploadBatch() since we already have a session
+
         if (!session) {
             showErrorToast("Couldn't create session. Please try again.");
             return;
         }
- 
+
         processButton.disabled = true;
  
         const uploadPromises = previewItems.map(previewItem => {
@@ -1535,9 +1554,10 @@ processButton.addEventListener('click', async () => {
         emptyState.classList.remove('hidden');
         previewGrid.classList.add('hidden');
     } catch (error) {
-        console.error('Some uploads failed:', error);
+        console.error('Processing error:', error);
+        showErrorToast("Failed to process files");
     } finally {
-        processButton.disabled = true;
+        isCreatingSession = false;
     }
  });
 
@@ -1752,18 +1772,22 @@ function updateInputSection(elements, state) {
 }
 
 // Get DOM elements
+const sessionDropDownBtn = document.getElementById('session-dropdown-btn');
 const sessionDropDownMenu = document.getElementById('session-dropdown-menu');
 const selectedSessionText = document.getElementById('selected-session-text');
 const activeSessionsList = document.getElementById('active-sessions-list');
 
 // Track selected session
 let selectedSessionId = null;
+// Add a flag to track session creation in progress
+let isCreatingSession = false;
 
-// Toggle dropdown when clicking process button
-processButton.addEventListener('click', (e) => {
+// Toggle dropdown only when clicking the session dropdown button
+sessionDropDownBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    sessionDropDownMenu.classList.toggle('hidden');
-    updateSessionsList();
+   e.preventDefault();
+   sessionDropDownMenu.classList.toggle('hidden');
+   updateSessionsList();
 });
 
 // Close dropdown when clicking outside
@@ -1785,18 +1809,45 @@ function createSessionElement(session) {
     sessionDiv.className = `px-4 py-2 text-sm text-gray-700 ${
         isSelectable ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
     }`;
+
+    const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+";
+    
+    const previewUrl = session.preview_image || placeholderImage;
     
     sessionDiv.innerHTML = `
-        <div class="flex flex-col gap-y-1">
-            <div class="flex justify-between items-center">
-                <span class="font-medium">Session ${id}</span>
-                <span class="${timeRemainingMinutes <= 3 ? 'text-froly-600' : 'text-gray-500'}">
-                    ${timeRemainingMinutes}m remaining
-                </span>
+        <div class="flex gap-x-3 p-x-0 hover:bg-gray-50 ${
+            isSelectable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'
+        }">
+            <!-- Fixed square thumbnail container -->
+            <div class="w-12 h-12 flex-shrink-0 relative rounded overflow-hidden bg-gray-100">
+                ${session.preview_image ? `
+                    <img 
+                        src="${session.preview_image}" 
+                        class="w-12 h-12 object-cover"
+                        loading="lazy"
+                        onerror="this.parentElement.innerHTML='<div class=\'w-12 h-12 flex items-center justify-center text-gray-400\'><svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'></path></svg></div>\';"
+                        alt=""
+                    >
+                ` : `
+                    <div class="w-12 h-12 flex items-center justify-center text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                        </svg>
+                    </div>
+                `}
             </div>
-            <div class="flex justify-between text-xs text-gray-500">
-                <span>${usage.files_count}/50 files</span>
-                <span>${(usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
+            <!-- Rest of content -->
+            <div class="flex flex-col flex-1 gap-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">${session.id.substring(0, 3)}...${session.id.slice(-3)}</span>
+                    <span class="${timeRemainingMinutes <= 3 ? 'text-froly-600' : 'text-gray-500'}">
+                        ${timeRemainingMinutes}m remaining
+                    </span>
+                </div>
+                <div class="flex justify-between text-xs text-gray-500">
+                    <span>${session.usage.files_count}/50 files</span>
+                    <span>${(session.usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
+                </div>
             </div>
         </div>
     `;
@@ -1813,43 +1864,83 @@ function createSessionElement(session) {
     return sessionDiv;
 }
 
+// Keep track of current sessions state
+let currentSessions = [];
+
+function haveSessionsChanged(newSessions) {
+    // Different number of sessions
+   if (currentSessions.length !== newSessions.length) return true;
+
+   // Compare each session for changes
+   return newSessions.some((newSession, index) => {
+       const currentSession = currentSessions[index];
+       return (
+           newSession.id !== currentSession.id ||
+           newSession.usage.files_count !== currentSession.usage.files_count ||
+           newSession.usage.total_size !== currentSession.usage.total_size ||
+           Math.abs(newSession.timeRemaining - currentSession.timeRemaining) > 1000
+       );
+   });
+}
+
 // Function to update sessions list
 async function updateSessionsList() {
-    activeSessionsList.innerHTML = '';
-    
     try {
-        const activeSessions = await getActiveSessions();
+        const newSessions = await getActiveSessions();
+        activeSessionsList.innerHTML = '';
+            
+        // Always add "New Session" option at the top
+        const newSessionDiv = document.createElement('div');
+        newSessionDiv.className = 'px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100';
+        newSessionDiv.innerHTML = `
+            <div class="flex items-center justify-center gap-x-3">
+                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded bg-gray-100">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </div>
+                <span class="font-medium">New Session</span>
+            </div>
+        `;
         
-        activeSessions.forEach(session => {
-            const sessionElement = createSessionElement(session);
-            activeSessionsList.appendChild(sessionElement);
+        newSessionDiv.addEventListener('click', () => {
+            selectedSessionId = null;
+            selectedSessionText.textContent = 'New Session';
+            dropdownMenu.classList.add('hidden');
         });
         
-        // Update selected session text
-        if (selectedSessionId) {
-            const selectedSession = activeSessions.find(s => s.id === selectedSessionId);
-            if (selectedSession) {
-                selectedSessionText.textContent = `Session ${selectedSession.id}`;
-            } else {
-                // Reset if selected session no longer exists
-                selectedSessionId = null;
-                selectedSessionText.textContent = 'New Session';
-            }
+        activeSessionsList.appendChild(newSessionDiv);
+
+        // Then add existing sessions
+        if (newSessions && newSessions.length > 0) {
+            newSessions.forEach(session => {
+                const sessionElement = createSessionElement(session);
+                activeSessionsList.appendChild(sessionElement);
+            });
+        } else {
+            const noSessionsDiv = document.createElement('div');
+            noSessionsDiv.className = 'px-4 py-3 text-sm text-gray-500 text-center';
+            noSessionsDiv.innerHTML = `
+                <span>No active sessions found</span>
+            `;
+            activeSessionsList.appendChild(noSessionsDiv);
         }
+
     } catch (error) {
         console.error('Error updating sessions list:', error);
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'px-4 py-2 text-sm text-froly-600 text-center';
-        errorDiv.textContent = 'Error loading sessions';
-        activeSessionsList.appendChild(errorDiv);
+        activeSessionsList.innerHTML = `
+            <div class="px-4 py-3 text-sm text-froly-600 text-center">
+                Error loading sessions
+            </div>
+        `;
     }
 }
 
 // Function to handle session selection
 function selectSession(session) {
     selectedSessionId = session.id;
-    selectedSessionText.textContent = `Session ${session.id}`;
-    sessionDropDownMenu.classList.add('hidden');
+    selectedSessionText.textContent = `${session.id.substring(0, 3)}...${session.id.slice(-3)}`;
+    dropdownMenu.classList.add('hidden');
 }
 
 // Helper functions
@@ -1891,19 +1982,17 @@ async function getActiveSessions() {
             const session = doc.data();
             const expiresAt = session.expires_at.toDate();
             
-            // Only include non-expired sessions
             if (now < expiresAt) {
                 activeSessions.push({
                     id: doc.id,
-                    timeRemaining: expiresAt - now,  // in milliseconds
+                    timeRemaining: expiresAt - now,
                     usage: session.usage,
-                    isProcessing: session.is_processing || false,
+                    preview_image: session.preview_image,
                     expires_at: expiresAt
                 });
             }
         });
 
-        // Sort by expiry time (soonest first)
         return activeSessions.sort((a, b) => a.timeRemaining - b.timeRemaining);
 
     } catch (error) {
@@ -1911,6 +2000,11 @@ async function getActiveSessions() {
         throw error;
     }
 }
+
+// Prevent dropdown from closing when clicking inside it
+sessionDropDownMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+});
 
 // function updateUploadUI(previewItem, progress) {
 //     const progressFill = previewItem.querySelector('[data-status]');
