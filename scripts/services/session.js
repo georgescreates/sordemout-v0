@@ -101,34 +101,48 @@ async function updateSessionFiles(sessionId, fileInfo) {
 
 async function isSessionActive() {
     const sessionId = localStorage.getItem('sessionId');
-    if (!sessionId) {
-        // No session - ready for new one
-        return true;
-    }
+    if (!sessionId) return true;
 
-    const sessionRef = doc(db, "sessions", sessionId);
-    const sessionSnap = await getDoc(sessionRef);
-    
-    if (!sessionSnap.exists()) {
-        // Session doesn't exist in DB, ready for new one
+    const session = await getSessionData(sessionId);
+    if (!session) {
         localStorage.removeItem('sessionId');
         return true;
     }
 
-    const session = sessionSnap.data();
     const now = new Date();
-    const expiresAt = session.expires_at.toDate();
-    const cooldownEndsAt = session.cooldown_ends_at.toDate();
+    const expiresAt = new Date(session.expires_at);
+    const cooldownEndsAt = new Date(session.cooldown_ends_at);
 
     if (now > expiresAt && now > cooldownEndsAt) {
-        // Session expired and cooldown finished
         localStorage.removeItem('sessionId');
         return true;
     }
 
-    // Return true only if session is still active
     return now < expiresAt;
 }
+
+/**
+ * Gets session data from Firebase
+ * @param {string} sessionId - Session ID
+ * @returns {Promise<Object>} Session data
+ */
+async function getSessionData(sessionId) {
+    if (!sessionId) return null;
+    
+    try {
+        const sessionRef = doc(db, "sessions", sessionId);
+        const sessionSnap = await getDoc(sessionRef);
+        
+        if (!sessionSnap.exists()) return null;
+        
+        return sessionSnap.data();
+    } catch (error) {
+        console.error("Error getting session data:", error);
+        return null;
+    }
+}
+
+export { getSessionData };
 
 // function to check session limits
 async function canAddFiles(fileCount, totalSize) {

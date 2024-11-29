@@ -548,6 +548,97 @@ selectAllCheckbox.addEventListener('change', (e) => {
     updateProcessButtonState();
 });
 
+// Constants for queue limits
+const QUEUE_LIMITS = {
+    maxFiles: 10,
+    maxSize: 50 * 1024 * 1024 // 50MB in bytes
+};
+
+function updateQueueStats() {
+    const queueStatsFiles = document.getElementById('queue-stats-file-count');
+    const queueStatsUsage = document.getElementById('queue-stats-file-usage');
+    const selectedItems = document.querySelectorAll('.preview-item input[type="checkbox"]:checked:not(:disabled)');
+    
+    // Handle file count limit
+    if (selectedItems.length > QUEUE_LIMITS.maxFiles) {
+        const lastSelected = selectedItems[selectedItems.length - 1];
+        lastSelected.checked = false;
+        const statusText = lastSelected.closest('.preview-item').querySelector('.status-text');
+        setAbortedStatus(statusText, lastSelected.closest('.preview-item'));
+        showErrorToast(`Queue limit exceeded. Maximum ${QUEUE_LIMITS.maxFiles} files allowed.`);
+        return updateQueueStats(); // Recalculate after deselection
+    }
+    
+    // Calculate total size
+    const totalSize = Array.from(selectedItems).reduce((sum, checkbox) => {
+        const previewItem = checkbox.closest('.preview-item');
+        return sum + parseInt(previewItem.getAttribute('data-file-size') || 0);
+    }, 0);
+    
+    // Handle size limit
+    if (totalSize > QUEUE_LIMITS.maxSize) {
+        const lastSelected = selectedItems[selectedItems.length - 1];
+        lastSelected.checked = false;
+        const statusText = lastSelected.closest('.preview-item').querySelector('.status-text');
+        setAbortedStatus(statusText, lastSelected.closest('.preview-item'));
+        showErrorToast(`Queue size limit exceeded. Maximum ${QUEUE_LIMITS.maxSize / (1024 * 1024)}MB allowed.`);
+        return updateQueueStats(); // Recalculate after deselection
+    }
+    
+    // Update UI with valid stats
+    if (queueStatsFiles) {
+        queueStatsFiles.textContent = `${String(selectedItems.length).padStart(2, '0')}/${QUEUE_LIMITS.maxFiles}`;
+    }
+    
+    if (queueStatsUsage) {
+        const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+        queueStatsUsage.textContent = `${sizeMB}MB/${QUEUE_LIMITS.maxSize / (1024 * 1024)}MB`;
+    }
+}
+
+// Initialize event listeners
+function initQueueStats() {
+    const previewGrid = document.getElementById('preview-grid');
+    previewGrid.addEventListener('change', (e) => {
+        if (e.target.type === 'checkbox') {
+            updateQueueStats();
+            updateProcessButtonState();
+            updateSelectAllState();
+        }
+    });
+    
+    const observer = new MutationObserver(updateQueueStats);
+    observer.observe(previewGrid, { childList: true, subtree: true });
+}
+
+// Handle "Select All" with validation
+document.getElementById('select-all')?.addEventListener('change', (e) => {
+    if (e.target.checked) {
+        const allValidItems = document.querySelectorAll('.preview-item input[type="checkbox"]:not(:disabled)');
+        const totalSize = Array.from(allValidItems).reduce((sum, checkbox) => {
+            const previewItem = checkbox.closest('.preview-item');
+            return sum + parseInt(previewItem.getAttribute('data-file-size') || 0);
+        }, 0);
+        
+        if (!validateQueueAddition(0, 0, allValidItems.length, totalSize)) {
+            e.target.checked = false;
+            return;
+        }
+    }
+    updateQueueStats();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const sessionDropDownMenu = document.getElementById('session-dropdown-menu');
+    sessionDropDownMenu.classList.add('hidden');
+
+    initSessionChecks();
+    initQueueStats();
+    updateQueueStats();
+});
+
+export { updateQueueStats };
+
 // function updateQueueStats() {
 //     const queueStatsFiles = document.querySelectorAll('.queue-stats-file');
     
@@ -1319,9 +1410,11 @@ importButton.addEventListener('click', () => {
 function updateProcessButtonState() {
     const processButton = document.getElementById('upl-client-firebase-btn');
     const processText = document.getElementById('process-text');
-    const selectedSessionText = document.getElementById('selected-session-text');
 
-    if (!processButton) return;
+    // Don't update if button is explicitly disabled during upload
+    if (processButton.hasAttribute('data-uploading')) {
+        return;
+    }
 
     const fileItems = document.querySelectorAll('.preview-item');
     const readyFiles = Array.from(fileItems).filter(item => {
@@ -1336,20 +1429,24 @@ function updateProcessButtonState() {
     });
 
     const count = readyFiles.length;
-    // Update process text based on count
     processText.textContent = count > 0 
         ? `Process ${count} Selected ${count === 1 ? 'File' : 'Files'} in` 
         : 'Process Selected Files in';
 
-    // Handle button state
-    if (count >= 3) {
+    // Check if user has selected an existing session
+    const isExistingSession = selectedSessionId !== null;
+    const minFilesRequired = isExistingSession ? 1 : 3;
+
+    if (count >= minFilesRequired) {
         processButton.classList.remove('opacity-50', 'cursor-not-allowed');
         processButton.disabled = false;
         processButton.title = '';
     } else {
         processButton.classList.add('opacity-50', 'cursor-not-allowed');
         processButton.disabled = true;
-        processButton.title = 'Select at least 3 files to process';
+        processButton.title = isExistingSession 
+            ? 'Select at least 1 file to process' 
+            : 'Select at least 3 files to create a new session';
     }
 }
 
@@ -1478,6 +1575,13 @@ processButton.addEventListener('click', async (e) => {
         .filter(item => item.querySelector('input[type="checkbox"]:checked'));
  
     try {
+        // Disable button immediately
+        processButton.setAttribute('data-uploading', 'true');
+        processButton.disabled = true;
+        processButton.classList.add('opacity-50', 'cursor-not-allowed');
+        const processText = document.getElementById('process-text');
+        processText.textContent = 'Process Selected Files in';
+
         isCreatingSession = true;
         let sessionId = selectedSessionId;
 
@@ -1543,6 +1647,13 @@ processButton.addEventListener('click', async (e) => {
         // Wait for all uploads to complete
         await Promise.all(uploadPromises);
 
+        // Show success notification
+        const uploadedCount = previewItems.length;
+        showSuccessNotification(uploadedCount, session);
+
+        // Add the notification badge
+        toggleSessionsBadge(true);
+
         // Wait a brief moment for Firestore updates to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -1557,6 +1668,7 @@ processButton.addEventListener('click', async (e) => {
         console.error('Processing error:', error);
         showErrorToast("Failed to process files");
     } finally {
+        processButton.removeAttribute('data-uploading');
         isCreatingSession = false;
     }
  });
@@ -1795,6 +1907,12 @@ document.addEventListener('click', () => {
     sessionDropDownMenu.classList.add('hidden');
 });
 
+sessionDropDownMenu.className = 'absolute right-0 z-10 mt-2 w-96 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-y-auto max-h-32';
+activeSessionsList.className = 'py-1 divide-y divide-gray-100';
+
+sessionDropDownMenu.style.scrollbarWidth = 'thin';
+sessionDropDownMenu.style.scrollbarColor = '#E5E7EB transparent';
+
 // Function to create session element
 function createSessionElement(session) {
     const { id, timeRemaining, usage } = session;
@@ -1888,8 +2006,8 @@ async function updateSessionsList() {
     try {
         const newSessions = await getActiveSessions();
         activeSessionsList.innerHTML = '';
-            
-        // Always add "New Session" option at the top
+        
+        // Add "New Session" option
         const newSessionDiv = document.createElement('div');
         newSessionDiv.className = 'px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100';
         newSessionDiv.innerHTML = `
@@ -1906,24 +2024,62 @@ async function updateSessionsList() {
         newSessionDiv.addEventListener('click', () => {
             selectedSessionId = null;
             selectedSessionText.textContent = 'New Session';
-            dropdownMenu.classList.add('hidden');
+            sessionDropDownMenu.classList.add('hidden');
+            updateProcessButtonState();
         });
         
         activeSessionsList.appendChild(newSessionDiv);
 
-        // Then add existing sessions
+        // Check if currently selected session is still valid
+        if (selectedSessionId) {
+            const selectedSessionStillValid = newSessions.some(session => 
+                session.id === selectedSessionId && 
+                session.timeRemaining > 180000 // More than 3 minutes remaining
+            );
+
+            if (!selectedSessionStillValid) {
+                // Reset to new session if current selection is invalid
+                selectedSessionId = null;
+                selectedSessionText.textContent = 'New Session';
+                updateProcessButtonState();
+            }
+        }
+
+        // Add active sessions
         if (newSessions && newSessions.length > 0) {
-            newSessions.forEach(session => {
-                const sessionElement = createSessionElement(session);
-                activeSessionsList.appendChild(sessionElement);
-            });
+            const validSessions = newSessions.filter(session => session.timeRemaining > 180000);
+            
+            if (validSessions.length > 0) {
+                validSessions.forEach(session => {
+                    const sessionElement = createSessionElement(session);
+                    activeSessionsList.appendChild(sessionElement);
+                });
+            } else {
+                // No valid sessions available
+                const noValidSessionsDiv = document.createElement('div');
+                noValidSessionsDiv.className = 'px-4 py-3 text-sm text-gray-500 text-center';
+                noValidSessionsDiv.textContent = 'No active sessions available';
+                activeSessionsList.appendChild(noValidSessionsDiv);
+                
+                // Reset to new session if no valid sessions exist
+                if (selectedSessionId) {
+                    selectedSessionId = null;
+                    selectedSessionText.textContent = 'New Session';
+                    updateProcessButtonState();
+                }
+            }
         } else {
             const noSessionsDiv = document.createElement('div');
             noSessionsDiv.className = 'px-4 py-3 text-sm text-gray-500 text-center';
-            noSessionsDiv.innerHTML = `
-                <span>No active sessions found</span>
-            `;
+            noSessionsDiv.textContent = 'No active sessions found';
             activeSessionsList.appendChild(noSessionsDiv);
+            
+            // Reset to new session if no sessions exist
+            if (selectedSessionId) {
+                selectedSessionId = null;
+                selectedSessionText.textContent = 'New Session';
+                updateProcessButtonState();
+            }
         }
 
     } catch (error) {
@@ -1933,14 +2089,43 @@ async function updateSessionsList() {
                 Error loading sessions
             </div>
         `;
+        
+        // Reset on error
+        if (selectedSessionId) {
+            selectedSessionId = null;
+            selectedSessionText.textContent = 'New Session';
+            updateProcessButtonState();
+        }
     }
+}
+
+// Add periodic check for session validity
+function initSessionChecks() {
+    // Check every 10 seconds
+    setInterval(async () => {
+        if (selectedSessionId) {
+            const sessions = await getActiveSessions();
+            const selectedSessionStillValid = sessions.some(session => 
+                session.id === selectedSessionId && 
+                session.timeRemaining > 180000
+            );
+
+            if (!selectedSessionStillValid) {
+                selectedSessionId = null;
+                selectedSessionText.textContent = 'New Session';
+                updateProcessButtonState();
+                showErrorToast('Selected session has expired');
+            }
+        }
+    }, 10000);
 }
 
 // Function to handle session selection
 function selectSession(session) {
     selectedSessionId = session.id;
     selectedSessionText.textContent = `${session.id.substring(0, 3)}...${session.id.slice(-3)}`;
-    dropdownMenu.classList.add('hidden');
+    sessionDropDownMenu.classList.add('hidden');
+    updateProcessButtonState();
 }
 
 // Helper functions
@@ -2005,6 +2190,161 @@ async function getActiveSessions() {
 sessionDropDownMenu.addEventListener('click', (e) => {
     e.stopPropagation();
 });
+
+// Function to create and show success notification
+function showSuccessNotification(count, sessionId) {
+    // Remove any existing notifications first
+    const existingNotification = document.querySelector('.success-notification');
+    if (existingNotification) {
+        existingNotification.remove();
+    }
+
+    // Create notification container
+    const notification = document.createElement('div');
+    notification.className = 'success-notification fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-4 z-50 flex items-start gap-3 max-w-md transition-all duration-300';
+    notification.style.opacity = '0';
+
+    // Create success icon
+    const icon = document.createElement('div');
+    icon.className = 'flex-shrink-0 w-6 h-6 rounded-full bg-green-100 flex items-center justify-center';
+    icon.innerHTML = `
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+    `;
+
+    // Create content container
+    const content = document.createElement('div');
+    content.className = 'flex-1';
+
+    // Add title
+    const title = document.createElement('h3');
+    title.className = 'text-sm font-medium text-gray-900';
+    title.textContent = `Successfully uploaded ${count} ${count === 1 ? 'image' : 'images'}`;
+
+    // Add message
+    const message = document.createElement('p');
+    message.className = 'mt-1 text-sm text-gray-500';
+    message.textContent = 'Your images are now being processed. Check Sessions to view progress.';
+
+    // Add session ID if provided
+    if (sessionId) {
+        const sessionInfo = document.createElement('p');
+        sessionInfo.className = 'mt-1 text-xs text-gray-400';
+        sessionInfo.textContent = `Session ID: ${sessionId.substring(0, 3)}...${sessionId.slice(-3)}`;
+        content.appendChild(sessionInfo);
+    }
+
+    // Add view button
+    const button = document.createElement('button');
+    button.className = 'mt-2 text-sm text-lochmara-600 hover:text-lochmara-500 font-medium flex items-center gap-1';
+    button.innerHTML = `
+        View Progress
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+        </svg>
+    `;
+    button.addEventListener('click', () => {
+        // Handle view progress click - you can trigger the sessions view here
+        console.log('View progress clicked');
+        // Add your navigation logic here
+    });
+
+    // Add close button
+    const closeButton = document.createElement('button');
+    closeButton.className = 'flex-shrink-0 ml-4 text-gray-400 hover:text-gray-500';
+    closeButton.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    `;
+    closeButton.addEventListener('click', () => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    });
+
+    // Assemble notification
+    content.appendChild(title);
+    content.appendChild(message);
+    content.appendChild(button);
+    notification.appendChild(icon);
+    notification.appendChild(content);
+    notification.appendChild(closeButton);
+
+    // Add to document
+    document.body.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+        notification.style.opacity = '1';
+    }, 100);
+
+    // Auto-hide after 10 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 20000);
+}
+
+// Function to add or remove the notification badge
+function toggleSessionsBadge(show = true) {
+    const sessionsButton = document.querySelector('[data-nav="sessions"]');
+    if (!sessionsButton) return;
+
+    // Remove existing badge if any
+    const existingBadge = sessionsButton.querySelector('.session-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+
+    if (show) {
+        // Create the badge
+        const badge = document.createElement('div');
+        badge.className = 'session-badge absolute -top-1 -right-2 w-2 h-2 bg-froly-500 rounded-full';
+        
+        // Add a subtle pulse animation
+        //badge.style.animation = 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite';
+        
+        // Add keyframes for pulse animation if not already in document
+        // if (!document.querySelector('#session-badge-keyframes')) {
+        //     const keyframes = document.createElement('style');
+        //     keyframes.id = 'session-badge-keyframes';
+        //     keyframes.textContent = `
+        //         @keyframes pulse {
+        //             0%, 100% {
+        //                 opacity: 1;
+        //             }
+        //             50% {
+        //                 opacity: .5;
+        //             }
+        //         }
+        //     `;
+        //     document.head.appendChild(keyframes);
+        // }
+
+        // Make sure the sessions button is positioned relatively
+        if (getComputedStyle(sessionsButton).position === 'static') {
+            sessionsButton.style.position = 'relative';
+        }
+
+        sessionsButton.appendChild(badge);
+    }
+}
+
+// Function to remove badge when sessions view is opened
+function removeSessionsBadge() {
+    toggleSessionsBadge(false);
+}
+
+// Add click handler to sessions button to remove badge
+document.querySelector('[data-nav="sessions"]')?.addEventListener('click', removeSessionsBadge);
+
+// Example usage:
+// Show badge after successful upload
+// toggleSessionsBadge(true);
+
+// Remove badge when viewing sessions
+// removeSessionsBadge();
 
 // function updateUploadUI(previewItem, progress) {
 //     const progressFill = previewItem.querySelector('[data-status]');

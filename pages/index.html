@@ -51,7 +51,7 @@
     </header>
 
     <main class="w-full min-h-[calc(100vh-136px)] py-8">
-        <div class="max-w-7xl mx-auto ">
+        <section class="max-w-7xl mx-auto" id="upload-section">
             <div class="flex flex-col md:flex-row flex-1 gap-10">
                 <!-- Left Column -->
                 <div class="w-full md:w-[60%] flex flex-col gap-y-4" id="left-section">
@@ -126,14 +126,14 @@
                                 <p id="status-text-container" class="text-sm text-silver-chalice-400 italic">Note: Due to technical limitations, only the first ~30 pins from boards will be shown.</p>
                         </div>
                     </div>
-                    <div class="left-section-part w-full" id="left-section-session-stats-container">
+                    <!-- <div class="left-section-part w-full" id="left-section-session-stats-container">
                         <div class="w-full flex gap-x-10">
                             <p class="text-silver-chalice-400 text-sm">Session upload count: <span class="font-medium text-lochmara-950" id="session-upload-count-files">00/50</span></p>
                             <p class="text-silver-chalice-400 text-sm">Session upload usage: <span class="font-medium text-lochmara-950" id="session-upload-count-size">00MB/250MB</span></p>
                             <p class="text-silver-chalice-400 text-sm" id="session-expiry-p">Session expires in: <span class="font-medium text-lochmara-950" id="session-expires-delay">30:00</span></p>
                             <p class="text-silver-chalice-400 text-sm" id="session-cooldown-p">Session cooldown: <span class="font-medium text-lochmara-950" id="session-cooldown-delay">60:00</span></p>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
     
                 <!-- Right Column -->
@@ -141,11 +141,11 @@
                     <div class="right-section-part w-full" id="right-section-title-container">
                         <h2>
                             <span class="text-sm text-gray-500">Step 2/2:</span>
-                            <span class="block text-2xl font-bold">Select Files to Process</span>
+                            <span class="block text-2xl font-bold">Select Files to Upload</span>
                         </h2>
                     </div>
-                    <div class="right-section-part w-full">
-                        <div class="flex items-center justify-between gap-x-4">
+                    <div class="right-section-part w-full flex justify-between">
+                        <div class="flex items-center gap-x-4">
                             <div class="flex items-center gap-x-2">
                                 <input type="checkbox" id="select-all" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
                                 <label for="select-all" class="text-sm text-gray-700">Select All</label>
@@ -157,6 +157,10 @@
                                     <label for="stack-mode-toggle" class="text-sm text-gray-700">Stack Mode</label>
                                 </div>
                             </div>
+                        </div>
+                        <div class="flex gap-x-8 items-center">
+                            <p class="text-silver-chalice-400 text-sm">Files : <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-count">00/10</span></p>
+                            <p class="text-silver-chalice-400 text-sm">Usage : <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-usage">0.00MB/50MB</span></p>
                         </div>
                     </div>
                     <div class="right-section-part w-full">
@@ -180,7 +184,7 @@
                                     <!-- Process Button Part -->
                                     <button id="upl-client-firebase-btn" 
                                             class="flex-1 px-5 py-3 hover:bg-lochmara-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium">
-                                        <span id="process-text">Process Selected Files in</span>
+                                        <span id="process-text">Upload Selected Files in</span>
                                     </button>
                             
                                     <!-- Session Selector Part (separate from process button) -->
@@ -205,23 +209,26 @@
                             <a href="http://" class="text-sm text-silver-chalice-400">Terms and conditions apply*</a>
                         </div>
                     </div>
-                    <div class="right-section-part w-full">
+                    <!-- <div class="right-section-part w-full">
                         <div class="text-silver-chalice-400">
                             <div class="w-full flex gap-x-8">
                                 <p class="text-silver-chalice-400 text-sm">In queue: <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-count">00/10</span></p>
                                 <p class="text-silver-chalice-400 text-sm">Queue usage: <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-usage">0.00MB/50MB</span></p>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </div>
-        </div>
+        </section>
+
+        <section id="session-section" class="hidden">Sessions</section>
+        <section id="settings-section" class="hidden">Settings</section>
     </main>
 
     <div class="fixed bottom-3 left-0 w-full bg-white py-4 h-16"> <!-- border-t border-gray-200 -->
         <div class="max-w-7xl mx-auto px-4 flex items-center justify-center gap-8 h-full">
             <!-- Upload Files Button -->
-            <button class="flex items-center gap-2 text-lochmara-600 hover:text-lochmara-700 font-medium"> <!-- border-b-2 border-lochmara-600-->
+            <button class="flex items-center gap-2 text-lochmara-600 font-medium" data-nav="upload"> <!-- border-b-2 border-lochmara-600-->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -229,7 +236,7 @@
             </button>
     
             <!-- Uploading History Button -->
-            <button class="flex items-center gap-2 text-gray-600 hover:text-gray-700 font-medium">
+            <button class="flex items-center gap-2 text-gray-600 font-medium" data-nav="session">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -237,7 +244,7 @@
             </button>
     
             <!-- Settings Button -->
-            <button class="flex items-center gap-2 text-gray-600 hover:text-gray-700 font-medium">
+            <button class="flex items-center gap-2 text-gray-600 font-medium" data-nav="settings">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -279,6 +286,7 @@
     
     <script type="module" src="/scripts/firebase-config.js"></script>
     <script type="module" src="/scripts/components/browse-files.js"></script>
+    <script type="module" src="/scripts/components/tab-bar.js"></script>
     <script type="module" src="/scripts/services/storage.js"></script>
     <script type="module" src="/scripts/services/session.js"></script>
 
