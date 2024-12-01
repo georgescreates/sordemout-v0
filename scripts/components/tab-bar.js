@@ -8,11 +8,14 @@ const sessionSection = document.getElementById('session-section');
 const settingsSection = document.getElementById('settings-section');
 
 // Initially hide session and settings sections
-sessionSection.classList.add('hidden');
+uploadSection.classList.add('hidden');
+// sessionSection.classList.add('hidden');
 settingsSection.classList.add('hidden');
 
 // Initially set upload button as active
-uploadBtn.classList.add('text-lochmara-600');
+uploadBtn.classList.remove('text-lochmara-600');
+sessionBtn.classList.add('text-lochmara-600');
+settingsBtn.classList.remove('text-lochmara-600');
 
 // Function to show active section and hide others
 function toggleSection(activeSectionId, activeButton) {

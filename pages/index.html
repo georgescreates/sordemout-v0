@@ -51,7 +51,7 @@
     </header>
 
     <main class="w-full min-h-[calc(100vh-136px)] py-8">
-        <section class="max-w-7xl mx-auto" id="upload-section">
+        <section class="max-w-7xl mx-auto hidden" id="upload-section">
             <div class="flex flex-col md:flex-row flex-1 gap-10">
                 <!-- Left Column -->
                 <div class="w-full md:w-[60%] flex flex-col gap-y-4" id="left-section">
@@ -158,7 +158,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex gap-x-8 items-center">
+                        <div class="flex gap-x-4 items-center">
                             <p class="text-silver-chalice-400 text-sm">Files : <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-count">00/10</span></p>
                             <p class="text-silver-chalice-400 text-sm">Usage : <span class="queue-stats-file font-medium text-lochmara-950" id="queue-stats-file-usage">0.00MB/50MB</span></p>
                         </div>
@@ -221,14 +221,63 @@
             </div>
         </section>
 
-        <section id="session-section" class="hidden">Sessions</section>
-        <section id="settings-section" class="hidden">Settings</section>
+        <section id="session-section" class="max-w-7xl mx-auto flex flex-col">
+            <div class="section-part session-section-part flex justify-between w-full">
+                <h2>
+                    <span class="block text-2xl font-bold">Sessions Tab List</span>
+                </h2>
+                <div class="flex justify-end gap-x-4">
+                    <button type="button" class="text-sm flex items-center justify-center gap-x-1 text-lochmara-950 hover:bg-silver-chalice-100 w-auto h-auto px-3 py-2 rounded">
+                        <svg class="fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+                            <path d="M170-302.31q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37 8.62-8.62 21.37-8.62h465q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.38-8.62 8.61-21.37 8.61H170ZM247.31-450q-12.75 0-21.38-8.63-8.62-8.63-8.62-21.38 0-12.76 8.62-21.37 8.63-8.62 21.38-8.62h465q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37-8.62 8.62-21.37 8.62h-465ZM325-597.69q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.38 8.62-8.61 21.37-8.61h465q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37-8.62 8.62-21.37 8.62H325Z"/>
+                        </svg>
+                        clear
+                    </button>
+                    <button type="button" class="text-sm flex items-center justify-center gap-x-1 text-lochmara-950 hover:bg-silver-chalice-100 w-auto h-auto px-3 py-2 rounded">
+                        <svg class="fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+                            <path d="M480.38-140q-70.79 0-132.63-26.77-61.83-26.77-107.83-72.77t-72.76-107.82q-26.77-61.83-26.77-132.62t26.77-132.63q26.76-61.85 72.76-107.85 46-46 107.83-72.77Q409.59-820 480.38-820q75.47 0 143.39 31.73 67.92 31.73 116.61 89.19v-64.77q0-12.75 8.63-21.37 8.63-8.63 21.39-8.63 12.75 0 21.37 8.63 8.61 8.62 8.61 21.37v136.92q0 15.37-10.39 25.76-10.4 10.4-25.76 10.4H627.31q-12.75 0-21.38-8.63-8.62-8.63-8.62-21.38 0-12.76 8.62-21.37 8.63-8.62 21.38-8.62h74.61q-41.38-51-98.69-80.11Q545.92-760 480.38-760q-117 0-198.5 81.5T200.38-480q0 117 81.5 198.5t198.5 81.5q96.93 0 172.5-59.5 75.58-59.5 98.43-152.19 3.84-12.54 13.57-19 9.73-6.46 22.01-4.85 13.03 1.62 20.15 11.62 7.11 10 3.88 21.92Q785-287.23 693-213.62 601-140 480.38-140Zm30-352.15 110 110q8.31 8.3 8.5 20.88.2 12.58-8.5 21.27-8.69 8.69-21.07 8.69-12.39 0-21.08-8.69l-117-117q-5.61-5.62-8.23-12.24-2.61-6.62-2.61-13.68V-650q0-12.75 8.62-21.38 8.63-8.62 21.39-8.62 12.75 0 21.37 8.62 8.61 8.63 8.61 21.38v157.85Z"/>
+                        </svg>
+                        refresh
+                    </button>
+                    <div class="relative">
+                        <button type="button" 
+                                id="sessions-sort-dropdown"
+                                class="flex items-center px-3 py-2 font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200 focus:outline-none whitespace-nowrap">
+                            <span id="session-selected-type" class="text-sm">Newest</span>
+                            <svg class="fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+                                <path d="M460.81-393.04 334.76-519.08q-2.6-2.61-4.1-5.83-1.5-3.21-1.5-6.89 0-7.35 4.97-12.78 4.97-5.42 13.1-5.42h265.54q8.13 0 13.1 5.48 4.97 5.47 4.97 12.77 0 1.83-5.61 12.67L499.19-393.04q-4.34 4.35-8.98 6.35-4.64 2-10.21 2-5.57 0-10.21-2-4.64-2-8.98-6.35Z"/>
+                            </svg>
+                        </button>
+                        <!-- Dropdown menu -->
+                        <div id="sessions-sort-menu" 
+                            class="absolute right-0 z-10 hidden w-48 mt-1 bg-white border border-silver-chalice-200 rounded shadow-lg">
+                            <div class="py-1">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="newest">Pinterest Pin</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="oldest">Pinterest Board</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="active">Unsplash</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-value="cooldown">Other</a>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="flex items-center justify-center bg-lochmara-600 hover:bg-lochmara-700 w-auto h-auto px-2 py-2 rounded">
+                        <svg class="fill-white stroke-white" xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px">
+                            <path d="M450-450H250q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q237.25-510 250-510h200v-200q0-12.75 8.63-21.37 8.63-8.63 21.38-8.63 12.76 0 21.37 8.63Q510-722.75 510-710v200h200q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q722.75-450 710-450H510v200q0 12.75-8.63 21.37-8.63 8.63-21.38 8.63-12.76 0-21.37-8.63Q450-237.25 450-250v-200Z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="section-part session-section-part"></div>
+            <div class="section-part session-section-part"></div>
+            <div class="section-part session-section-part"></div>
+        </section>
+
+        <section id="settings-section" class="hidden max-w-7xl mx-auto">Settings</section>
     </main>
 
     <div class="fixed bottom-3 left-0 w-full bg-white py-4 h-16"> <!-- border-t border-gray-200 -->
         <div class="max-w-7xl mx-auto px-4 flex items-center justify-center gap-8 h-full">
             <!-- Upload Files Button -->
-            <button class="flex items-center gap-2 text-lochmara-600 font-medium" data-nav="upload"> <!-- border-b-2 border-lochmara-600-->
+            <button class="flex items-center gap-2 text-gray-600 font-medium" data-nav="upload"> <!-- border-b-2 border-lochmara-600-->
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
