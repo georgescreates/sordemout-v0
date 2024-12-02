@@ -827,6 +827,14 @@ body {
   height: 100%;
 }
 
+.h-9 {
+  height: 2.25rem;
+}
+
+.h-10 {
+  height: 2.5rem;
+}
+
 .max-h-32 {
   max-height: 8rem;
 }
@@ -841,6 +849,26 @@ body {
 
 .min-h-\[calc\(100vh-136px\)\] {
   min-height: calc(100vh - 136px);
+}
+
+.min-h-10 {
+  min-height: 2.5rem;
+}
+
+.min-h-\[\] {
+  min-height: ;
+}
+
+.min-h-\[60vh\] {
+  min-height: 60vh;
+}
+
+.min-h-\[70vh\] {
+  min-height: 70vh;
+}
+
+.min-h-\[65vh\] {
+  min-height: 65vh;
 }
 
 .w-11 {
@@ -887,12 +915,20 @@ body {
   width: 24rem;
 }
 
+.w-auto {
+  width: auto;
+}
+
 .w-full {
   width: 100%;
 }
 
-.w-auto {
-  width: auto;
+.w-9 {
+  width: 2.25rem;
+}
+
+.w-10 {
+  width: 2.5rem;
 }
 
 .min-w-\[120px\] {
@@ -915,7 +951,19 @@ body {
   flex: 1 1 0%;
 }
 
+.flex-none {
+  flex: none;
+}
+
+.flex-auto {
+  flex: 1 1 auto;
+}
+
 .flex-shrink-0 {
+  flex-shrink: 0;
+}
+
+.shrink-0 {
   flex-shrink: 0;
 }
 
@@ -1013,6 +1061,11 @@ body {
   gap: 2rem;
 }
 
+.gap-x-1 {
+  -moz-column-gap: 0.25rem;
+       column-gap: 0.25rem;
+}
+
 .gap-x-10 {
   -moz-column-gap: 2.5rem;
        column-gap: 2.5rem;
@@ -1044,11 +1097,6 @@ body {
 
 .gap-y-4 {
   row-gap: 1rem;
-}
-
-.gap-x-1 {
-  -moz-column-gap: 0.25rem;
-       column-gap: 0.25rem;
 }
 
 .space-x-8 > :not([hidden]) ~ :not([hidden]) {
@@ -1186,6 +1234,11 @@ body {
   border-color: rgb(200 200 200 / var(--tw-border-opacity));
 }
 
+.border-lochmara-950 {
+  --tw-border-opacity: 1;
+  border-color: rgb(7 44 74 / var(--tw-border-opacity));
+}
+
 .bg-black {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity));
@@ -1256,14 +1309,19 @@ body {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
 
-.bg-silver-chalice-400 {
+.bg-lochmara-400 {
   --tw-bg-opacity: 1;
-  background-color: rgb(166 166 166 / var(--tw-bg-opacity));
+  background-color: rgb(54 181 250 / var(--tw-bg-opacity));
 }
 
 .bg-silver-chalice-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(237 237 237 / var(--tw-bg-opacity));
+}
+
+.bg-lochmara-500 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(12 156 235 / var(--tw-bg-opacity));
 }
 
 .bg-opacity-50 {
@@ -1274,44 +1332,28 @@ body {
   --tw-bg-opacity: 0.8;
 }
 
-.fill-lochmara-600 {
-  fill: #0084d7;
-}
-
-.fill-gray-600 {
-  fill: #4b5563;
-}
-
-.fill-silver-chalice-600 {
-  fill: #888888;
-}
-
-.fill-silver-chalice-400 {
-  fill: #a6a6a6;
+.fill-lochmara-950 {
+  fill: #072c4a;
 }
 
 .fill-white {
   fill: #fff;
 }
 
-.fill-lochmara-950 {
-  fill: #072c4a;
+.fill-silver-chalice-400 {
+  fill: #a6a6a6;
 }
 
-.stroke-lochmara-600 {
-  stroke: #0084d7;
-}
-
-.stroke-silver-chalice-400 {
-  stroke: #a6a6a6;
+.stroke-lochmara-950 {
+  stroke: #072c4a;
 }
 
 .stroke-white {
   stroke: #fff;
 }
 
-.stroke-lochmara-950 {
-  stroke: #072c4a;
+.stroke-silver-chalice-400 {
+  stroke: #a6a6a6;
 }
 
 .object-contain {
@@ -1439,6 +1481,10 @@ body {
 
 .font-medium {
   font-weight: 500;
+}
+
+.capitalize {
+  text-transform: capitalize;
 }
 
 .italic {
@@ -1688,6 +1734,11 @@ body {
   background-color: rgb(0 132 215 / var(--tw-bg-opacity));
 }
 
+.hover\:bg-lochmara-700:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(1 98 163 / var(--tw-bg-opacity));
+}
+
 .hover\:bg-lochmara-800:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(6 83 134 / var(--tw-bg-opacity));
@@ -1696,11 +1747,6 @@ body {
 .hover\:bg-silver-chalice-100:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(237 237 237 / var(--tw-bg-opacity));
-}
-
-.hover\:bg-lochmara-700:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(1 98 163 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-opacity-100:hover {
@@ -1742,6 +1788,11 @@ body {
   border-color: rgb(54 181 250 / var(--tw-border-opacity));
 }
 
+.focus\:border-lochmara-950:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(7 44 74 / var(--tw-border-opacity));
+}
+
 .focus\:outline-none:focus {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -1761,6 +1812,11 @@ body {
 .focus\:ring-lochmara-400:focus {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(54 181 250 / var(--tw-ring-opacity));
+}
+
+.focus\:ring-lochmara-950:focus {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(7 44 74 / var(--tw-ring-opacity));
 }
 
 .disabled\:cursor-not-allowed:disabled {
