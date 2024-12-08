@@ -29,3 +29,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+let sessionItem = Array.from(document.getElementsByClassName('session-tab-list-item'));
+let sessionItemHead = Array.from(document.getElementsByClassName('session-item-header'));
+let sessionItemBody = Array.from(document.getElementsByClassName('session-item-body'));
+
+sessionItem.forEach((item, index) => {
+    item.addEventListener('click', () => {
+        // Get current state from data attribute
+        const isExpanded = item.dataset.bodyExpanded === "true";
+        
+        // Toggle the state
+        item.dataset.bodyExpanded = (!isExpanded).toString();
+        
+        // Update the body height if we have a matching body element
+        if (sessionItemBody[index]) {
+            if (!isExpanded) {
+                sessionItemBody[index].classList.remove('hidden');
+            } else {
+                sessionItemBody[index].classList.add('hidden');
+            }
+        }
+    })
+});

@@ -316,8 +316,8 @@
                     <p class="text-sm">Click + icon to start a new session ...</p>
                 </div>
                 <ul class="sessions-tab-list h-full w-full flex flex-col gap-2">
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
+                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col data-body-expanded="false">
+                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer hover:bg-silver-chalice-50"">
                             <div class="h-full min-h-10 w-8 flex items-center justify-center">
                                 <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
                             </div>
@@ -354,13 +354,14 @@
                                 </div>
                             </div>
                             <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
+                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-100 rounded flex items-center justify-center text-sm text-puerto-rico-700 font-medium" data-status="active">active</span>
                             </div>
                             <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
                         </div>
-                        <div class="session-item-body w-full h-auto">
+                        <div class="session-item-body w-full h-auto min-h-120 px-3 py-2 hidden">
+
                         </div>
                     </li>
                     <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
