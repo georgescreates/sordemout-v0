@@ -52,3 +52,125 @@ sessionItem.forEach((item, index) => {
         }
     })
 });
+
+// Get all filter containers
+const filterContainers = document.querySelectorAll('.session-filter-container');
+
+// Add click handler to each container
+filterContainers.forEach(container => {
+    container.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Find the checkbox within this container
+        const checkbox = container.querySelector('input[type="checkbox"]');
+        
+        // Don't toggle if clicking the checkbox itself (it will handle its own state)
+        if (e.target !== checkbox) {
+            // Toggle the checkbox
+            checkbox.checked = !checkbox.checked;
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize all sliders
+    document.querySelectorAll('.session-slider-container').forEach(initializeSlider);
+});
+
+function initializeSlider(container) {
+    const minHandle = container.querySelector('.min-handle');
+    const maxHandle = container.querySelector('.max-handle');
+    const activeTrack = container.querySelector('.active-track');
+    const minValue = container.querySelector('.min-value');
+    const maxValue = container.querySelector('.max-value');
+    
+    let isDragging = null;
+    
+    function positionToPercent(position) {
+        const bounds = container.getBoundingClientRect();
+        let percent = ((position - bounds.left) / bounds.width) * 100;
+        return Math.min(Math.max(percent, 0), 100);
+    }
+    
+    function updateSlider(handle, percent) {
+        const minPercent = parseFloat(minHandle.style.left);
+        const maxPercent = parseFloat(maxHandle.style.left);
+        
+        if (handle === minHandle && percent <= maxPercent) {
+            handle.style.left = `${percent}%`;
+            minValue.textContent = `${Math.round(percent)}%`;
+        }
+        
+        if (handle === maxHandle && percent >= minPercent) {
+            handle.style.left = `${percent}%`;
+            maxValue.textContent = `${Math.round(percent)}%`;
+        }
+
+        // Always update active track
+        activeTrack.style.left = `${minPercent}%`;
+        activeTrack.style.right = `${100 - maxPercent}%`;
+    }
+
+    function showLabels() {
+        minValue.style.opacity = '1';
+        maxValue.style.opacity = '1';
+    }
+
+    function hideLabels() {
+        if (!isDragging) {
+            minValue.style.opacity = '0';
+            maxValue.style.opacity = '0';
+        }
+    }
+    
+    function handleMouseDown(e) {
+        isDragging = e.target;
+        showLabels();
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    function handleMouseMove(e) {
+        if (!isDragging) return;
+        const percent = positionToPercent(e.clientX);
+        updateSlider(isDragging, percent);
+    }
+    
+    function handleMouseUp() {
+        isDragging = null;
+        hideLabels();
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+    }
+    
+    function handleTouchStart(e) {
+        isDragging = e.target;
+        showLabels();
+        document.addEventListener('touchmove', handleTouchMove);
+        document.addEventListener('touchend', handleTouchEnd);
+    }
+    
+    function handleTouchMove(e) {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const percent = positionToPercent(touch.clientX);
+        updateSlider(isDragging, percent);
+        e.preventDefault();
+    }
+    
+    function handleTouchEnd() {
+        isDragging = null;
+        hideLabels();
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+    }
+    
+    // Add event listeners for this specific slider
+    minHandle.addEventListener('mousedown', handleMouseDown);
+    maxHandle.addEventListener('mousedown', handleMouseDown);
+    minHandle.addEventListener('touchstart', handleTouchStart);
+    maxHandle.addEventListener('touchstart', handleTouchStart);
+    minHandle.addEventListener('mouseenter', showLabels);
+    minHandle.addEventListener('mouseleave', hideLabels);
+    maxHandle.addEventListener('mouseenter', showLabels);
+    maxHandle.addEventListener('mouseleave', hideLabels);
+}

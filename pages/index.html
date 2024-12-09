@@ -360,8 +360,81 @@
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
                         </div>
-                        <div class="session-item-body w-full h-auto min-h-120 px-3 py-2 hidden">
-
+                        <div class="session-item-body w-full h-auto px-3 py-2 flex flex-col gap-y-2">
+                            <div class="session-item-body-controls-wrapper w-full h-10 flex gap-x-5">
+                                <div class="session-item-controls-threshold-wrapper w-[30%] h-full flex gap-x-4 items-center whitespace-nowrap">
+                                    <h5 class="font-medium">Range :</h5>
+                                    <div class="session-slider-container relative w-full">
+                                        <div class="relative h-6 flex items-center">
+                                            <div class="base-track absolute w-full h-1 bg-silver-chalice-200 rounded"></div>
+                                            <div class="active-track absolute h-1 bg-lochmara-600 rounded" style="left: 30%; right: 30%"></div>
+                                            
+                                            <div class="min-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 30%">
+                                                <span class="min-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                                                    60%
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="max-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 70%">
+                                                <span class="max-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                                                    80%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="session-item-controls-filters-wrapper w-[70%] h-full flex gap-x-4 items-center whitespace-nowrap">
+                                    <h5 class="font-medium">Filters :</h5>
+                                    <div class="session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                                        <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Mountain View</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">12</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Sunset Lighting</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">8</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Urban Architecture</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">15</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">People Portraits</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">6</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Black & White</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">10</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="session-item-body-grid w-full min-h-10"></div>
                         </div>
                     </li>
                     <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
@@ -402,248 +475,87 @@
                                 </div>
                             </div>
                             <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
+                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-100 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
                             </div>
                             <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
                         </div>
-                        <div class="session-item-body w-full h-auto">
-                        </div>
-                    </li>
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
-                            <div class="h-full min-h-10 w-8 flex items-center justify-center">
-                                <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            </div>
-                            <div class="h-full min-h-10 w-10 flex items-center">
-                                <div class="h-10 w-10 rounded bg-silver-chalice-200"></div>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <p class="text-lochmara-950 font-medium">XHia...0uIo</p>
-                            </div> -->
-                            <div class="flex-[2] h-full min-h-10 flex flex-col overflow-hidden">
-                                <h4 class="text-lochmara-950 font-medium leading-none w-full truncate">Pinterest Abstract Boardey</h4>
-                                <div class="flex gap-x-2">
-                                    <span class="text-sm text-silver-chalice-400 italic">Created 2d ago</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">•</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">Expiring in 88d</span>
+                        <div class="session-item-body w-full h-auto px-3 py-2 flex flex-col gap-y-2">
+                            <div class="session-item-body-controls-wrapper w-full h-10 flex gap-x-5">
+                                <div class="session-item-controls-threshold-wrapper w-[30%] h-full flex gap-x-4 items-center whitespace-nowrap">
+                                    <h5 class="font-medium">Range :</h5>
+                                    <div class="session-slider-container relative w-full">
+                                        <div class="relative h-6 flex items-center">
+                                            <div class="base-track absolute w-full h-1 bg-silver-chalice-200 rounded"></div>
+                                            <div class="active-track absolute h-1 bg-lochmara-600 rounded" style="left: 30%; right: 30%"></div>
+                                            
+                                            <div class="min-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 30%">
+                                                <span class="min-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                                                    60%
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="max-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 70%">
+                                                <span class="max-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                                                    80%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="session-item-controls-filters-wrapper w-[70%] h-full flex gap-x-4 items-center whitespace-nowrap">
+                                    <h5 class="font-medium">Filters :</h5>
+                                    <div class="session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                                        <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Mountain View</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">12</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Sunset Lighting</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">8</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Urban Architecture</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">15</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">People Portraits</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">6</small>
+                                            </div>
+                                        </div>
+                                        <div class="session-filter-container [&_*]:cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                                            <div class="flex items-center gap-x-2 h-full">
+                                                <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                                <label for="select-all" class="text-sm text-gray-700">Black & White</label>
+                                            </div>
+                                            <div class="flex items-center">
+                                                <small class="text-[0.7rem] text-silver-chalice-500">10</small>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
-                                    <div class="session-file-count-progress-bar w-[20%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>12 files</span>
-                                    <span>out of 50 files</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
-                                    <div class="session-usage-progress-bar w-[53.2%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>133MB</span>
-                                    <span>out of 250MB</span>
-                                </div>
-                            </div>
-                            <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
-                        </div>
-                        <div class="session-item-body w-full h-auto">
-                        </div>
-                    </li>
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
-                            <div class="h-full min-h-10 w-8 flex items-center justify-center">
-                                <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            </div>
-                            <div class="h-full min-h-10 w-10 flex items-center">
-                                <div class="h-10 w-10 rounded bg-silver-chalice-200"></div>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <p class="text-lochmara-950 font-medium">XHia...0uIo</p>
-                            </div> -->
-                            <div class="flex-[2] h-full min-h-10 flex flex-col overflow-hidden">
-                                <h4 class="text-lochmara-950 font-medium leading-none w-full truncate">Pinterest Abstract Boardey</h4>
-                                <div class="flex gap-x-2">
-                                    <span class="text-sm text-silver-chalice-400 italic">Created 2d ago</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">•</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">Expiring in 88d</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
-                                    <div class="session-file-count-progress-bar w-[20%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>12 files</span>
-                                    <span>out of 50 files</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
-                                    <div class="session-usage-progress-bar w-[53.2%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>133MB</span>
-                                    <span>out of 250MB</span>
-                                </div>
-                            </div>
-                            <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
-                        </div>
-                        <div class="session-item-body w-full h-auto">
-                        </div>
-                    </li>
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
-                            <div class="h-full min-h-10 w-8 flex items-center justify-center">
-                                <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            </div>
-                            <div class="h-full min-h-10 w-10 flex items-center">
-                                <div class="h-10 w-10 rounded bg-silver-chalice-200"></div>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <p class="text-lochmara-950 font-medium">XHia...0uIo</p>
-                            </div> -->
-                            <div class="flex-[2] h-full min-h-10 flex flex-col overflow-hidden">
-                                <h4 class="text-lochmara-950 font-medium leading-none w-full truncate">Pinterest Abstract Boardey</h4>
-                                <div class="flex gap-x-2">
-                                    <span class="text-sm text-silver-chalice-400 italic">Created 2d ago</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">•</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">Expiring in 88d</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
-                                    <div class="session-file-count-progress-bar w-[20%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>12 files</span>
-                                    <span>out of 50 files</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
-                                    <div class="session-usage-progress-bar w-[53.2%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>133MB</span>
-                                    <span>out of 250MB</span>
-                                </div>
-                            </div>
-                            <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
-                        </div>
-                        <div class="session-item-body w-full h-auto">
-                        </div>
-                    </li>
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
-                            <div class="h-full min-h-10 w-8 flex items-center justify-center">
-                                <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            </div>
-                            <div class="h-full min-h-10 w-10 flex items-center">
-                                <div class="h-10 w-10 rounded bg-silver-chalice-200"></div>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <p class="text-lochmara-950 font-medium">XHia...0uIo</p>
-                            </div> -->
-                            <div class="flex-[2] h-full min-h-10 flex flex-col overflow-hidden">
-                                <h4 class="text-lochmara-950 font-medium leading-none w-full truncate">Pinterest Abstract Boardey</h4>
-                                <div class="flex gap-x-2">
-                                    <span class="text-sm text-silver-chalice-400 italic">Created 2d ago</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">•</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">Expiring in 88d</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
-                                    <div class="session-file-count-progress-bar w-[20%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>12 files</span>
-                                    <span>out of 50 files</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
-                                    <div class="session-usage-progress-bar w-[53.2%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>133MB</span>
-                                    <span>out of 250MB</span>
-                                </div>
-                            </div>
-                            <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
-                        </div>
-                        <div class="session-item-body w-full h-auto">
-                        </div>
-                    </li>
-                    <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col hover:bg-silver-chalice-50">
-                        <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer">
-                            <div class="h-full min-h-10 w-8 flex items-center justify-center">
-                                <input type="checkbox" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            </div>
-                            <div class="h-full min-h-10 w-10 flex items-center">
-                                <div class="h-10 w-10 rounded bg-silver-chalice-200"></div>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <p class="text-lochmara-950 font-medium">XHia...0uIo</p>
-                            </div> -->
-                            <div class="flex-[2] h-full min-h-10 flex flex-col overflow-hidden">
-                                <h4 class="text-lochmara-950 font-medium leading-none w-full truncate">Pinterest Abstract Boardey</h4>
-                                <div class="flex gap-x-2">
-                                    <span class="text-sm text-silver-chalice-400 italic">Created 2d ago</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">•</span>
-                                    <span class="text-sm text-silver-chalice-400 italic">Expiring in 88d</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
-                                    <div class="session-file-count-progress-bar w-[20%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>12 files</span>
-                                    <span>out of 50 files</span>
-                                </div>
-                            </div>
-                            <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
-                                <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
-                                    <div class="session-usage-progress-bar w-[53.2%] h-full rounded-[1rem] bg-lochmara-600"></div>
-                                </div>
-                                <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
-                                    <span>133MB</span>
-                                    <span>out of 250MB</span>
-                                </div>
-                            </div>
-                            <div class="flex-[1] h-full min-h-10 flex items-center">
-                                <span class="session-item-status-label px-2 py-1 bg-puerto-rico-200 rounded flex items-center justify-center text-sm text-puerto-rico-800 font-medium" data-status="active">active</span>
-                            </div>
-                            <!-- <div class="flex-[1] h-full min-h-10 flex items-center">N/A</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">Just Now</div> -->
-                            <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
-                        </div>
-                        <div class="session-item-body w-full h-auto">
+                            <div class="session-item-body-grid w-full min-h-10"></div>
                         </div>
                     </li>
                 </ul>
