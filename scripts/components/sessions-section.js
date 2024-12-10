@@ -174,3 +174,30 @@ function initializeSlider(container) {
     maxHandle.addEventListener('mouseenter', showLabels);
     maxHandle.addEventListener('mouseleave', hideLabels);
 }
+
+let sessionFiles = document.getElementsByClassName('session-item-file');
+let sessionFileVisibilityBtn = document.getElementsByClassName('session-file-visibility-btn');
+let sessionFileVisibilityIcon = document.getElementsByClassName('visibility-icon');
+let sessionFileVisibilityOffIcon = document.getElementsByClassName('visibility-off-icon');
+
+for(let i = 0; i < sessionFiles.length; i++){
+    sessionFileVisibilityBtn[i].addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        if(sessionFiles[i].dataset.fileVisibility == "true"){
+            sessionFiles[i].dataset.fileVisibility = "false";
+
+            sessionFileVisibilityIcon[i].classList.add('hidden');
+            sessionFileVisibilityOffIcon[i].classList.remove('hidden');
+
+            sessionFiles[i].classList.add('opacity-50');
+        }else{
+            sessionFiles[i].dataset.fileVisibility = "true";
+
+            sessionFileVisibilityIcon[i].classList.remove('hidden');
+            sessionFileVisibilityOffIcon[i].classList.add('hidden');
+
+            sessionFiles[i].classList.remove('opacity-50');
+        }
+    })
+}
