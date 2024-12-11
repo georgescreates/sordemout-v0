@@ -361,7 +361,7 @@
                             <!-- <div class="flex-[1.5] h-full min-h-10 flex items-center">in 90 days</div> -->
                         </div>
                         <div class="session-item-body w-full h-auto px-3 py-2 flex flex-col gap-y-2">
-                            <div class="session-item-galery-grid flex gap-x-2 w-full h-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                            <div class="session-item-galery-grid flex gap-x-2 w-full h-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] mt-2">
                                 <div class="session-item-file w-[5rem] h-[5rem] bg-silver-chalice-200 rounded shrink-0 p-1.5 group" data-file-visibility="true">
                                     <div class="session-item-file-ctas-container flex gap-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button class="session-file-visibility-btn w-5 h-5 flex items-center justify-center bg-gold-sand-50 rounded">
@@ -692,19 +692,22 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="session-item-footer w-full-min-h-10 flex items-center gap-x-2 px-3 py-2">
-                            <div class="session-item-footer-cooldown-container flex gap-x-1 font-medium text-sm">
-                                <p class="text-silver-chalice-400">Cooldown :</p>
-                                <span class="session-item-h-cooldown ml-1">--</span>:
-                                <span class="session-item-m-cooldown">--</span>:
-                                <span class="session-item-s-cooldown">--</span>
-                            </div>
-                            <div class="session-item-footer-cooldown-container flex gap-x-1 font-medium text-sm">
-                                <p class="text-silver-chalice-400">Cooldown Usage :</p>
-                                <span class="session-item-h-cooldown ml-1">--</span>:
-                                <span class="session-item-m-cooldown">--</span>:
-                                <span class="session-item-s-cooldown">--</span>
+                            <div class="session-item-footer w-full-min-h-10 flex items-center justify-between px-3 py-2">
+                                <div class="session-item-footer-cooldowns-wrapper flex gap-x-8">
+                                    <div class="session-item-footer-cooldown-container flex gap-x-1 font-medium text-sm">
+                                        <p class="text-silver-chalice-400">Cooldown :</p>
+                                        <span class="session-item-h-cooldown ml-1">--</span>:
+                                        <span class="session-item-m-cooldown">--</span>:
+                                        <span class="session-item-s-cooldown">--</span>
+                                    </div>
+                                    <div class="session-item-footer-cooldown-container flex gap-x-1 font-medium text-sm">
+                                        <p class="text-silver-chalice-400">Cooldown Usage :</p>
+                                        <span class="session-item-s-cooldown">00/05</span>
+                                    </div>
+                                </div>
+                                <div class="session-item-footer-ctas-wrapper">
+                                    <button type="button" class="px-3 py-1.5 bg-lochmara-50 border border-lochmara-600 rounded text-lochmara-600 font-medium">Reprocess</button>
+                                </div>
                             </div>
                         </div>
                     </li>
