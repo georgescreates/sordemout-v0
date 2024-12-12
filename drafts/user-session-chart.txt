@@ -1,0 +1,124 @@
+Guest Users (No Account)
+Sessions:
+
+Maximum of 3 active sessions at any time
+To create a new session when at the limit, one must be deleted or expire
+
+Queue:
+
+Maximum of 5 files in queue per session
+
+File Limits:
+
+20 files per session
+100MB total usage per session
+5MB maximum per file
+
+Cooldowns:
+
+Two cooldowns per session
+First cooldown: 30 minutes
+Second cooldown: 1 hour
+
+Cooldown Effects:
+
+After first cooldown (30 minutes):
+
+File limit increases to 30 files per session
+Total usage increases to 150MB per session
+
+
+After second cooldown (1 hour):
+
+File limit increases to 40 files per session
+Total usage increases to 200MB per session
+
+
+
+
+Registered Free Users
+Sessions:
+
+Maximum of 5 active sessions at any time
+
+Queue:
+
+Maximum of 10 files in queue per session
+
+File Limits:
+
+50 files per session
+250MB total usage per session
+10MB maximum per file
+
+Cooldowns:
+
+Two cooldowns per session
+First cooldown: 20 minutes
+Second cooldown: 45 minutes
+
+Cooldown Effects:
+
+After first cooldown (20 minutes):
+
+File limit increases to 75 files per session
+Total usage increases to 375MB per session
+
+
+After second cooldown (45 minutes):
+
+File limit increases to 100 files per session
+Total usage increases to 500MB per session
+
+
+
+
+Premium Users
+Sessions:
+
+Maximum of 10 active sessions at any time
+
+Queue:
+
+Maximum of 25 files in queue per session
+
+File Limits:
+
+100 files per session
+1GB total usage per session
+50MB maximum per file
+
+Cooldowns:
+
+One cooldown per session
+Cooldown duration: 15 minutes
+
+Cooldown Effects:
+
+After cooldown (15 minutes):
+
+File limit increases to 150 files per session
+Total usage increases to 2GB per session
+
+
+
+
+Business Users
+Sessions:
+
+Unlimited active sessions
+
+Queue:
+
+Maximum of 50 files in queue per session
+
+File Limits:
+
+500 files per session
+5GB total usage per session
+250MB maximum per file
+
+Cooldowns:
+
+No cooldowns
+Limits reset daily at midnight UTC
