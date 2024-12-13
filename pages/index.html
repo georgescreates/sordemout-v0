@@ -903,8 +903,24 @@
     <script type="module" src="/scripts/components/browse-files.js"></script>
     <script type="module" src="/scripts/components/tab-bar.js"></script>
     <script type="module" src="/scripts/components/sessions-section.js"></script>
+    <script type="module" src="/scripts/services/clip-service.js"></script>
     <script type="module" src="/scripts/services/storage.js"></script>
     <script type="module" src="/scripts/services/session.js"></script>
+
+    <!-- <script type="module">
+        import { testReplicate } from '../scripts/services/clip-service.js';
+
+        // Run test
+        testReplicate().then(result => {
+            if (result.success) {
+                console.log('✅ API access working!');
+                console.log('Full response:', result.data);
+            } else {
+                console.log('❌ API access failed');
+                console.log('Error details:', result.error);
+            }
+        });
+    </script> -->
 
     <script>
         const mobileMenuButton = document.querySelector('button');
