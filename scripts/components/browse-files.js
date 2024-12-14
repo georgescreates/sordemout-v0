@@ -3,7 +3,7 @@ import { handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles } f
 import { collection, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from '../firebase-config.js';
 import { getDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { createSession } from '../services/session.js';
+import { createSession, getSessionData, SESSION_TIERS } from '../services/session.js';
 
 // Constants
 const EXTRACT_PICS_API = 'https://api.extract.pics/v0/extractions';
@@ -554,46 +554,53 @@ const QUEUE_LIMITS = {
     maxSize: 50 * 1024 * 1024 // 50MB in bytes
 };
 
-function updateQueueStats() {
+async function updateQueueStats() {
     const queueStatsFiles = document.getElementById('queue-stats-file-count');
     const queueStatsUsage = document.getElementById('queue-stats-file-usage');
     const selectedItems = document.querySelectorAll('.preview-item input[type="checkbox"]:checked:not(:disabled)');
     
-    // Handle file count limit
-    if (selectedItems.length > QUEUE_LIMITS.maxFiles) {
-        const lastSelected = selectedItems[selectedItems.length - 1];
-        lastSelected.checked = false;
-        const statusText = lastSelected.closest('.preview-item').querySelector('.status-text');
-        setAbortedStatus(statusText, lastSelected.closest('.preview-item'));
-        showErrorToast(`Queue limit exceeded. Maximum ${QUEUE_LIMITS.maxFiles} files allowed.`);
-        return updateQueueStats(); // Recalculate after deselection
-    }
+    const sessionId = localStorage.getItem('sessionId');
+    const sessionData = await getSessionData(sessionId);
     
-    // Calculate total size
+    // Use default tier 1 limits if no session
+    const currentTier = sessionData?.tier?.current || 1;
+    const tierLimits = SESSION_TIERS['guest'][currentTier];
+    const currentUsage = {
+        files_count: sessionData?.usage?.files_count || 0,
+        total_size: sessionData?.usage?.total_size || 0
+    };
+    
     const totalSize = Array.from(selectedItems).reduce((sum, checkbox) => {
         const previewItem = checkbox.closest('.preview-item');
         return sum + parseInt(previewItem.getAttribute('data-file-size') || 0);
     }, 0);
     
-    // Handle size limit
-    if (totalSize > QUEUE_LIMITS.maxSize) {
+    if (selectedItems.length + currentUsage.files_count > tierLimits.max_files) {
         const lastSelected = selectedItems[selectedItems.length - 1];
         lastSelected.checked = false;
-        const statusText = lastSelected.closest('.preview-item').querySelector('.status-text');
-        setAbortedStatus(statusText, lastSelected.closest('.preview-item'));
-        showErrorToast(`Queue size limit exceeded. Maximum ${QUEUE_LIMITS.maxSize / (1024 * 1024)}MB allowed.`);
-        return updateQueueStats(); // Recalculate after deselection
+        setAbortedStatus(lastSelected.closest('.preview-item').querySelector('.status-text'));
+        showErrorToast(`Queue limit exceeded. Current tier allows ${tierLimits.max_files} files.`);
+        return updateQueueStats();
     }
     
-    // Update UI with valid stats
+    if (totalSize + currentUsage.total_size > tierLimits.max_size) {
+        const lastSelected = selectedItems[selectedItems.length - 1];
+        lastSelected.checked = false;
+        setAbortedStatus(lastSelected.closest('.preview-item').querySelector('.status-text'));
+        showErrorToast(`Queue size limit exceeded. Current tier allows ${formatFileSize(tierLimits.max_size)}`);
+        return updateQueueStats();
+    }
+    
     if (queueStatsFiles) {
-        queueStatsFiles.textContent = `${String(selectedItems.length).padStart(2, '0')}/${QUEUE_LIMITS.maxFiles}`;
+        queueStatsFiles.textContent = `${String(selectedItems.length).padStart(2, '0')}/${tierLimits.max_files}`;
     }
     
     if (queueStatsUsage) {
         const sizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-        queueStatsUsage.textContent = `${sizeMB}MB/${QUEUE_LIMITS.maxSize / (1024 * 1024)}MB`;
+        queueStatsUsage.textContent = `${sizeMB}MB/${tierLimits.max_size / (1024 * 1024)}MB`;
     }
+    
+    updateProcessButtonState();
 }
 
 // Initialize event listeners
@@ -1407,47 +1414,29 @@ importButton.addEventListener('click', () => {
 });
 
 // Function to update process button state
-function updateProcessButtonState() {
+async function updateProcessButtonState() {
     const processButton = document.getElementById('upl-client-firebase-btn');
     const processText = document.getElementById('process-text');
-
-    // Don't update if button is explicitly disabled during upload
-    if (processButton.hasAttribute('data-uploading')) {
+    
+    if (processButton.hasAttribute('data-uploading')) return;
+    
+    const sessionData = await getSessionData(localStorage.getItem('sessionId'));
+    const isInCooldown = sessionData?.cooldown?.active;
+    
+    if (isInCooldown) {
+        processButton.disabled = true;
+        processButton.classList.add('opacity-50', 'cursor-not-allowed');
+        processText.textContent = `In cooldown: ${formatTime(sessionData.cooldown.timeRemaining)}`;
         return;
     }
-
-    const fileItems = document.querySelectorAll('.preview-item');
-    const readyFiles = Array.from(fileItems).filter(item => {
-        const progressFill = item.querySelector('div[data-status]');
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        const status = progressFill?.getAttribute('data-status');
-        
-        return status === 'ready' && 
-               checkbox?.checked && 
-               !checkbox?.disabled && 
-               !progressFill.classList.contains('bg-red-500');
-    });
-
-    const count = readyFiles.length;
-    processText.textContent = count > 0 
-        ? `Process ${count} Selected ${count === 1 ? 'File' : 'Files'} in` 
-        : 'Process Selected Files in';
-
-    // Check if user has selected an existing session
-    const isExistingSession = selectedSessionId !== null;
-    const minFilesRequired = isExistingSession ? 1 : 3;
-
-    if (count >= minFilesRequired) {
-        processButton.classList.remove('opacity-50', 'cursor-not-allowed');
-        processButton.disabled = false;
-        processButton.title = '';
-    } else {
-        processButton.classList.add('opacity-50', 'cursor-not-allowed');
-        processButton.disabled = true;
-        processButton.title = isExistingSession 
-            ? 'Select at least 1 file to process' 
-            : 'Select at least 3 files to create a new session';
-    }
+    
+    const selectedFiles = document.querySelectorAll('.preview-item input[type="checkbox"]:checked');
+    processButton.disabled = selectedFiles.length === 0;
+    processButton.classList.toggle('opacity-50', selectedFiles.length === 0);
+    processButton.classList.toggle('cursor-not-allowed', selectedFiles.length === 0);
+    processText.textContent = selectedFiles.length > 0 ? 
+        `Process ${selectedFiles.length} Selected ${selectedFiles.length === 1 ? 'File' : 'Files'}` : 
+        'Select Files to Process';
 }
 
 // Function to show error toast
@@ -1918,53 +1907,43 @@ function createSessionElement(session) {
     const { id, timeRemaining, usage } = session;
     
     // Calculate if session is selectable
-    const timeRemainingMinutes = Math.floor(timeRemaining / 60000);
-    const queueSize = calculateQueueSize();
-    const isSelectable = timeRemainingMinutes > 3 && 
-                        canSessionAcceptQueue(session, queueSize);
+    const isInCooldown = session.tier?.current_cooldown_ends_at ?
+        Date.now() < new Date(session.tier.current_cooldown_ends_at).getTime() : false;
+    
+    const isSelectable = !isInCooldown && session.tier?.current <= 3;
 
     const sessionDiv = document.createElement('div');
     sessionDiv.className = `px-4 py-2 text-sm text-gray-700 ${
         isSelectable ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
     }`;
 
-    const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjZjNmNGY2Ii8+PC9zdmc+";
-    
-    const previewUrl = session.preview_image || placeholderImage;
-    
+    // Build session element HTML
     sessionDiv.innerHTML = `
-        <div class="flex gap-x-3 p-x-0 hover:bg-gray-50 ${
-            isSelectable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'
-        }">
-            <!-- Fixed square thumbnail container -->
+        <div class="flex gap-x-3 p-x-0 hover:bg-gray-50 ${isSelectable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}">
+            <!-- Thumbnail column -->
             <div class="w-12 h-12 flex-shrink-0 relative rounded overflow-hidden bg-gray-100">
                 ${session.preview_image ? `
-                    <img 
-                        src="${session.preview_image}" 
+                    <img src="${session.preview_image}" 
                         class="w-12 h-12 object-cover"
                         loading="lazy"
                         onerror="this.parentElement.innerHTML='<div class=\'w-12 h-12 flex items-center justify-center text-gray-400\'><svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'></path></svg></div>\';"
-                        alt=""
-                    >
-                ` : `
-                    <div class="w-12 h-12 flex items-center justify-center text-gray-400">
+                        alt="">
+                ` : `<div class="w-12 h-12 flex items-center justify-center text-gray-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                    </div>
-                `}
+                    </div>`}
             </div>
-            <!-- Rest of content -->
-            <div class="flex flex-col flex-1 gap-y-1">
-                <div class="flex justify-between items-center">
-                    <span class="font-medium">${session.id.substring(0, 3)}...${session.id.slice(-3)}</span>
-                    <span class="${timeRemainingMinutes <= 3 ? 'text-froly-600' : 'text-gray-500'}">
-                        ${timeRemainingMinutes}m remaining
-                    </span>
-                </div>
+            
+            <!-- Info column -->
+            <div class="flex flex-col flex-1 justify-between">
+                <!-- Top row: Session ID -->
+                <h4 class="font-medium text-base w-full overflow-hidden text-ellipsis">${id}</h4>
+                
+                <!-- Bottom row: Usage stats -->
                 <div class="flex justify-between text-xs text-gray-500">
-                    <span>${session.usage.files_count}/50 files</span>
-                    <span>${(session.usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
+                    <span>${usage.files_count}/50 files</span>
+                    <span>${(usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
                 </div>
             </div>
         </div>
@@ -1972,11 +1951,6 @@ function createSessionElement(session) {
 
     if (isSelectable) {
         sessionDiv.addEventListener('click', () => selectSession(session));
-    } else {
-        const reason = timeRemainingMinutes <= 3 
-            ? 'Session expires soon'
-            : 'Insufficient capacity for selected files';
-        sessionDiv.setAttribute('title', reason);
     }
 
     return sessionDiv;
@@ -2008,46 +1982,11 @@ async function updateSessionsList() {
         activeSessionsList.innerHTML = '';
         
         // Add "New Session" option
-        const newSessionDiv = document.createElement('div');
-        newSessionDiv.className = 'px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100';
-        newSessionDiv.innerHTML = `
-            <div class="flex items-center justify-center gap-x-3">
-                <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded bg-gray-100">
-                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                </div>
-                <span class="font-medium">New Session</span>
-            </div>
-        `;
-        
-        newSessionDiv.addEventListener('click', () => {
-            selectedSessionId = null;
-            selectedSessionText.textContent = 'New Session';
-            sessionDropDownMenu.classList.add('hidden');
-            updateProcessButtonState();
-        });
-        
+        const newSessionDiv = createNewSessionOption();
         activeSessionsList.appendChild(newSessionDiv);
 
-        // Check if currently selected session is still valid
-        if (selectedSessionId) {
-            const selectedSessionStillValid = newSessions.some(session => 
-                session.id === selectedSessionId && 
-                session.timeRemaining > 180000 // More than 3 minutes remaining
-            );
-
-            if (!selectedSessionStillValid) {
-                // Reset to new session if current selection is invalid
-                selectedSessionId = null;
-                selectedSessionText.textContent = 'New Session';
-                updateProcessButtonState();
-            }
-        }
-
-        // Add active sessions
         if (newSessions && newSessions.length > 0) {
-            const validSessions = newSessions.filter(session => session.timeRemaining > 180000);
+            const validSessions = newSessions.filter(session => session && session.tier);
             
             if (validSessions.length > 0) {
                 validSessions.forEach(session => {
@@ -2055,33 +1994,13 @@ async function updateSessionsList() {
                     activeSessionsList.appendChild(sessionElement);
                 });
             } else {
-                // No valid sessions available
-                const noValidSessionsDiv = document.createElement('div');
-                noValidSessionsDiv.className = 'px-4 py-3 text-sm text-gray-500 text-center';
-                noValidSessionsDiv.textContent = 'No active sessions available';
-                activeSessionsList.appendChild(noValidSessionsDiv);
-                
-                // Reset to new session if no valid sessions exist
-                if (selectedSessionId) {
-                    selectedSessionId = null;
-                    selectedSessionText.textContent = 'New Session';
-                    updateProcessButtonState();
-                }
+                addNoSessionsMessage('No active sessions available');
             }
         } else {
-            const noSessionsDiv = document.createElement('div');
-            noSessionsDiv.className = 'px-4 py-3 text-sm text-gray-500 text-center';
-            noSessionsDiv.textContent = 'No active sessions found';
-            activeSessionsList.appendChild(noSessionsDiv);
-            
-            // Reset to new session if no sessions exist
-            if (selectedSessionId) {
-                selectedSessionId = null;
-                selectedSessionText.textContent = 'New Session';
-                updateProcessButtonState();
-            }
+            addNoSessionsMessage('No active sessions found');
         }
 
+        handleSelectedSessionValidity(newSessions);
     } catch (error) {
         console.error('Error updating sessions list:', error);
         activeSessionsList.innerHTML = `
@@ -2089,32 +2008,77 @@ async function updateSessionsList() {
                 Error loading sessions
             </div>
         `;
-        
-        // Reset on error
-        if (selectedSessionId) {
-            selectedSessionId = null;
-            selectedSessionText.textContent = 'New Session';
-            updateProcessButtonState();
+        resetSelectedSession();
+    }
+}
+
+function createNewSessionOption() {
+    const div = document.createElement('div');
+    div.className = 'px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100';
+    div.innerHTML = `
+        <div class="flex items-center justify-center gap-x-3">
+            <div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded bg-gray-100">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+            </div>
+            <span class="font-medium">New Session</span>
+        </div>
+    `;
+    
+    div.addEventListener('click', () => {
+        selectedSessionId = null;
+        selectedSessionText.textContent = 'New Session';
+        sessionDropDownMenu.classList.add('hidden');
+        updateProcessButtonState();
+    });
+    
+    return div;
+}
+
+function addNoSessionsMessage(message) {
+    const div = document.createElement('div');
+    div.className = 'px-4 py-3 text-sm text-gray-500 text-center';
+    div.textContent = message;
+    activeSessionsList.appendChild(div);
+}
+
+function handleSelectedSessionValidity(sessions) {
+    if (selectedSessionId) {
+        const selectedSessionStillValid = sessions.some(session => 
+            session.id === selectedSessionId && 
+            session.tier && 
+            !session.tier.current_cooldown_ends_at
+        );
+
+        if (!selectedSessionStillValid) {
+            resetSelectedSession();
         }
     }
 }
 
+function resetSelectedSession() {
+    selectedSessionId = null;
+    selectedSessionText.textContent = 'New Session';
+    updateProcessButtonState();
+}
+
 // Add periodic check for session validity
 function initSessionChecks() {
-    // Check every 10 seconds
     setInterval(async () => {
         if (selectedSessionId) {
             const sessions = await getActiveSessions();
             const selectedSessionStillValid = sessions.some(session => 
                 session.id === selectedSessionId && 
-                session.timeRemaining > 180000
+                (!session.tier.current_cooldown_ends_at || 
+                 Date.now() > new Date(session.tier.current_cooldown_ends_at).getTime())
             );
 
             if (!selectedSessionStillValid) {
                 selectedSessionId = null;
                 selectedSessionText.textContent = 'New Session';
                 updateProcessButtonState();
-                showErrorToast('Selected session has expired');
+                showErrorToast('Selected session is in cooldown');
             }
         }
     }, 10000);
@@ -2158,28 +2122,33 @@ setInterval(updateSessionsList, 10000); // Update every 10 seconds
 
 async function getActiveSessions() {
     try {
-        const now = new Date();
         const sessionsRef = collection(db, "sessions");
         const querySnapshot = await getDocs(sessionsRef);
         const activeSessions = [];
         
         querySnapshot.forEach((doc) => {
             const session = doc.data();
-            const expiresAt = session.expires_at.toDate();
+            if (!session || !session.tier) return; // Skip invalid sessions
             
-            if (now < expiresAt) {
+            const now = Date.now();
+
+            const isMaxedOut = session.tier?.current === 3 && 
+                             (session.usage?.files_count >= session.limits?.max_files || 
+                              session.usage?.total_size >= session.limits?.max_size);
+
+            if (!isMaxedOut) {
                 activeSessions.push({
                     id: doc.id,
-                    timeRemaining: expiresAt - now,
-                    usage: session.usage,
+                    timeRemaining: session.tier?.current_cooldown_ends_at ? 
+                                 new Date(session.tier.current_cooldown_ends_at).getTime() - now : 0,
+                    usage: session.usage || { files_count: 0, total_size: 0 },
                     preview_image: session.preview_image,
-                    expires_at: expiresAt
+                    tier: session.tier
                 });
             }
         });
 
-        return activeSessions.sort((a, b) => a.timeRemaining - b.timeRemaining);
-
+        return activeSessions;
     } catch (error) {
         console.error("Error getting active sessions:", error);
         throw error;
@@ -2346,24 +2315,60 @@ document.querySelector('[data-nav="sessions"]')?.addEventListener('click', remov
 // Remove badge when viewing sessions
 // removeSessionsBadge();
 
-// function updateUploadUI(previewItem, progress) {
-//     const progressFill = previewItem.querySelector('[data-status]');
-//     const statusText = previewItem.querySelector('.status-text');
+function updateUploadUI(previewItem, progress) {
+    const progressFill = previewItem.querySelector('[data-status]');
+    const statusText = previewItem.querySelector('.status-text');
 
-//     switch(progress.status) {
-//         case 'uploading':
-//             progressFill.style.width = `${progress.progress}%`;
-//             statusText.textContent = `uploading • ${progress.speed}MB/s`;
-//             break;
-//         case 'complete':
-//             progressFill.style.width = '100%';
-//             progressFill.className = 'h-full bg-green-500 transition-all duration-300';
-//             statusText.textContent = 'complete';
-//             previewItem.uploadedUrl = progress.downloadURL;
-//             break;
-//         case 'error':
-//             progressFill.className = 'h-full bg-red-500 transition-all duration-300';
-//             statusText.textContent = 'failed';
-//             break;
-//     }
-// }
+    switch(progress.status) {
+        case 'uploading':
+            progressFill.style.width = `${progress.progress}%`;
+            let statusMessage = `${Math.round(progress.progress)}% • ${progress.speed}MB/s`;
+            if (progress.willTriggerCooldown) {
+                statusMessage += ' • Will trigger cooldown';
+                progressFill.classList.add('bg-gold-sand-500');
+            }
+            statusText.textContent = statusMessage;
+            break;
+
+        case 'complete':
+            progressFill.style.width = '100%';
+            progressFill.className = 'h-full bg-green-500 transition-all duration-300';
+            statusText.textContent = progress.triggeredCooldown ? 
+                'Complete - Cooldown Started' : 
+                'Complete';
+            previewItem.uploadedUrl = progress.downloadURL;
+            
+            if (progress.triggeredCooldown) {
+                updateSessionStatsUI();
+                showCooldownNotification(progress.nextTier);
+            }
+            break;
+
+        case 'error':
+            progressFill.className = 'h-full bg-red-500 transition-all duration-300';
+            statusText.textContent = progress.error;
+            break;
+    }
+}
+
+function showCooldownNotification(nextTier) {
+    const notification = document.createElement('div');
+    notification.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-4 z-50 flex items-start gap-3';
+    
+    notification.innerHTML = `
+        <div class="flex-shrink-0 w-6 h-6 rounded-full bg-gold-sand-100 flex items-center justify-center">
+            <svg class="w-4 h-4 text-gold-sand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div>
+            <h3 class="font-medium">Tier Cooldown Started</h3>
+            <p class="text-sm text-gray-500">Next tier: ${nextTier.max_files} files, ${formatFileSize(nextTier.max_size)} total</p>
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}

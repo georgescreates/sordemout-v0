@@ -3,4 +3,5 @@ node_modules/
 *.log
 .env
 config.js
-scripts/config.js
+scripts/config.
+scripts/replicate-config.js

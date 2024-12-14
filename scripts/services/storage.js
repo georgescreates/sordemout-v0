@@ -1,33 +1,42 @@
 import { storage } from '../firebase-config.js';
+import { canAddFiles } from './session.js';
 import { getImageFeatures } from './clip-service.js';
 import { getImageDescription, extractDynamicCategories, generateTags } from './kosmos-service.js';
 import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
-
 
 let sessionDescriptions = [];
 
 // Upload a single file to Firebase Storage
 async function uploadFileToStorage(file, progressCallback) {
-    // Create unique filename
+    // Check session limits before upload
+    const limitCheck = await canAddFiles(1, file.size);
+    if (!limitCheck.withinLimits) {
+        progressCallback({
+            status: 'error',
+            error: limitCheck.inCooldown ? 
+                   'Session in cooldown' : 
+                   'Session limits reached'
+        });
+        return null;
+    }
+
     const timestamp = Date.now();
     const filename = `${timestamp}_${file.name}`;
-
-    // Create storage reference
     const storageRef = ref(storage, `uploads/${filename}`);
-
-    // Create upload task
     const uploadTask = uploadBytesResumable(storageRef, file);
 
-    // Monitor upload
-    uploadTask.on('state_changed', 
+    uploadTask.on('state_changed',
         // Progress
         (snapshot) => {
             const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            const speed = (snapshot.bytesTransferred / 1024 / 1024).toFixed(2); // MB/s
+            const speed = (snapshot.bytesTransferred / 1024 / 1024).toFixed(2);
+            
             progressCallback({
                 progress,
                 speed,
-                status: 'uploading'
+                status: 'uploading',
+                willTriggerCooldown: limitCheck.wouldTriggerCooldown,
+                nextTier: limitCheck.nextTier
             });
         },
         // Error
@@ -42,31 +51,15 @@ async function uploadFileToStorage(file, progressCallback) {
             try {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 
-                // Get description from Kosmos
-                const description = await getImageDescription(downloadURL);
-                
-                // Add to session descriptions
-                sessionDescriptions.push(description);
-                
-                // Generate dynamic tags
-                const tags = generateTags(description);
-                console.log('Dynamic tags:', tags);
-                
-                // Use sessionDescriptions instead of previousDescriptions
-                const categories = extractDynamicCategories(sessionDescriptions);
-                console.log('Dynamic categories:', categories);
-                
                 progressCallback({
                     status: 'complete',
                     progress: 100,
                     downloadURL,
-                    description,
-                    tags,
-                    categories
+                    triggeredCooldown: limitCheck.wouldTriggerCooldown,
+                    nextTier: limitCheck.nextTier
                 });
-        
+
             } catch (error) {
-                console.error('Processing Error:', error);
                 progressCallback({
                     status: 'error',
                     error: error.message
