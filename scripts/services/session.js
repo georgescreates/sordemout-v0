@@ -4,33 +4,38 @@ import { writeBatch, increment } from 'https://www.gstatic.com/firebasejs/10.7.1
 
 import { updateSessionStatsUI } from '../components/browse-files.js';
 
-export const SESSION_TIERS = {
+const SESSION_TIERS = {
     guest: {
         1: {
             max_files: 20,
             max_size: 100 * 1024 * 1024, // 100MB
-            max_file_size: 5 * 1024 * 1024 // 5MB
+            max_file_size: 5 * 1024 * 1024, // 5MB
         },
         2: {
             max_files: 30,
             max_size: 150 * 1024 * 1024,
             max_file_size: 5 * 1024 * 1024,
-            cooldown_duration: 30 * 60 * 1000 // 30 minutes for first cooldown
+            cooldown_duration: 30 * 60 * 1000, // 30min first cooldown
         },
         3: {
             max_files: 40,
             max_size: 200 * 1024 * 1024,
             max_file_size: 5 * 1024 * 1024,
-            cooldown_duration: 60 * 60 * 1000 // 1 hour for second cooldown
+            cooldown_duration: 60 * 60 * 1000, // 1h second cooldown
         }
     }
 };
 
+// Total possible time = initial + first cooldown + second cooldown + buffer
+const SESSION_TOTAL_DURATION = 3 * 60 * 60 * 1000; // 3 hours total
+
 async function createSession(type = 'guest') {
+    const now = Date.now();
+    
     const session = {
         type,
         created_at: serverTimestamp(),
-        expires_at: new Date(now + limits[type].duration),
+        expires_at: new Date(now + SESSION_TOTAL_DURATION),
         tier: {
             current: 1,
             cooldowns_used: 0,
@@ -249,4 +254,4 @@ async function canAddFiles(fileCount, totalSize) {
     };
 }
 
-export { createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles };
+export { SESSION_TIERS, createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles };

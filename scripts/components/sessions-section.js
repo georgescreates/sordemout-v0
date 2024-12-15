@@ -300,21 +300,21 @@ function createSessionElement(session) {
                 <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
                     <div class="session-file-count-progress-bar-container w-[80%] h-2 rounded-[1rem] bg-lochmara-200">
                         <div class="session-file-count-progress-bar h-full rounded-[1rem] bg-lochmara-600" 
-                             style="width: ${((session.usage?.files_count || 0) / 50) * 100}%"></div>
+                            style="width: ${((session.usage?.files_count || 0) / session.limits.max_files) * 100}%"></div>
                     </div>
                     <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
                         <span>${session.usage?.files_count || 0} files</span>
-                        <span>out of 50 files</span>
+                        <span>out of ${session.limits.max_files} files</span>
                     </div>
                 </div>
                 <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
                     <div class="session-usage-progress-bar-container w-[80%] h-2 rounded-full bg-lochmara-200">
                         <div class="session-usage-progress-bar h-full rounded-[1rem] bg-lochmara-600" 
-                             style="width: ${((session.usage?.total_size || 0) / (250 * 1024 * 1024)) * 100}%"></div>
+                            style="width: ${((session.usage?.total_size || 0) / ((session.limits.max_size / (1024 * 1024)) * 1024 * 1024)) * 100}%"></div>
                     </div>
                     <div class="flex justify-between text-sm mb-1 w-[80%] font-medium">
                         <span>${((session.usage?.total_size || 0) / (1024 * 1024)).toFixed(2)}MB</span>
-                        <span>out of 250MB</span>
+                        <span>out of ${(session.limits.max_size / (1024 * 1024))}MB</span>
                     </div>
                 </div>
                 <div class="flex-[1] h-full min-h-10 flex items-center">
