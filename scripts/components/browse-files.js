@@ -285,6 +285,8 @@ async function handleFiles(files) {
             showErrorToast(validation.error);
         }
     });
+
+    initializeCheckboxListeners(); // Re-initialize for new checkboxes
 }
 
 // Function to simulate upload progress (remove when implementing real upload)
@@ -1902,48 +1904,104 @@ activeSessionsList.className = 'py-1 divide-y divide-gray-100';
 sessionDropDownMenu.style.scrollbarWidth = 'thin';
 sessionDropDownMenu.style.scrollbarColor = '#E5E7EB transparent';
 
+function formatLongDuration(expiresAt) {
+    if (!expiresAt?.toDate) return '';
+    
+    const expiry = expiresAt.toDate();
+    const now = new Date();
+    
+    if (now > expiry) return 'Expired';
+    
+    const timeLeft = expiry - now;
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+ 
+    if (days > 0) return `Expiring in ${days}d`;
+    if (hours > 0) return `Expiring in ${hours}h`;
+    return `Expiring in ${minutes}m`;
+ }
+
 // Function to create session element
 function createSessionElement(session) {
-    const { id, timeRemaining, usage } = session;
+    if (!session) return null;
+
+    const id = session.id || '';
+    const tier = session.tier || { current: 1 };
+    const usage = session.usage || { files_count: 0, total_size: 0 };
+    const currentTierLimits = SESSION_TIERS?.[session.type || 'guest']?.[tier.current] || SESSION_TIERS.guest[1];
+
+    // Calculate timeRemaining
+    let timeRemaining = 0;
+    function formatTimeDisplay(session) {
+        if (!session.expires_at?.toDate) return '';
     
-    // Calculate if session is selectable
-    const isInCooldown = session.tier?.current_cooldown_ends_at ?
-        Date.now() < new Date(session.tier.current_cooldown_ends_at).getTime() : false;
-    
-    const isSelectable = !isInCooldown && session.tier?.current <= 3;
+        const expiresAt = session.expires_at.toDate();
+        const now = new Date();
+        
+        if (now > expiresAt) return 'Expired';
+        
+        const timeLeft = expiresAt - now;
+        const minutes = Math.floor(timeLeft / 60000);
+        return `Expiring in ${minutes}m`;
+    }
+
+    const isInCooldown = tier.current_cooldown_ends_at ? 
+        Date.now() < new Date(tier.current_cooldown_ends_at).getTime() : false;
+        
+    // Calculate queue capacity
+    const selectedItems = document.querySelectorAll('.preview-item input[type="checkbox"]:checked');
+    const queueSize = Array.from(selectedItems).reduce((total, item) => {
+        const previewItem = item.closest('.preview-item');
+        return total + parseInt(previewItem.getAttribute('data-file-size') || 0);
+    }, 0);
+
+    const remainingFiles = currentTierLimits.max_files - (usage?.files_count || 0);
+    const remainingSize = currentTierLimits.max_size - (usage?.total_size || 0);
+    const queueFiles = selectedItems.length;
+
+    const isSelectable = !isInCooldown && 
+                        session.tier?.current <= 3 && 
+                        remainingFiles >= queueFiles && 
+                        remainingSize >= queueSize;
 
     const sessionDiv = document.createElement('div');
     sessionDiv.className = `px-4 py-2 text-sm text-gray-700 ${
-        isSelectable ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'
+        isSelectable ? 'hover:bg-gray-100' : 'opacity-50 cursor-not-allowed'
     }`;
 
     // Build session element HTML
+    const timeDisplay = formatTimeDisplay(session);
+    const sessionName = session.name ? 
+        session.name : 
+        `Session ${session.id.substring(0, 3)}...${session.id.slice(-3)}`;
     sessionDiv.innerHTML = `
         <div class="flex gap-x-3 p-x-0 hover:bg-gray-50 ${isSelectable ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}">
-            <!-- Thumbnail column -->
             <div class="w-12 h-12 flex-shrink-0 relative rounded overflow-hidden bg-gray-100">
                 ${session.preview_image ? `
                     <img src="${session.preview_image}" 
-                        class="w-12 h-12 object-cover"
-                        loading="lazy"
-                        onerror="this.parentElement.innerHTML='<div class=\'w-12 h-12 flex items-center justify-center text-gray-400\'><svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'></path></svg></div>\';"
-                        alt="">
-                ` : `<div class="w-12 h-12 flex items-center justify-center text-gray-400">
+                         class="w-12 h-12 object-cover"
+                         loading="lazy"
+                         alt=""
+                         onerror="this.parentElement.innerHTML='<div class=\'w-12 h-12 flex items-center justify-center text-gray-400\'><svg class=\'w-4 h-4\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z\'></path></svg></div>\';">
+                ` : `
+                    <div class="w-12 h-12 flex items-center justify-center text-gray-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                         </svg>
-                    </div>`}
+                    </div>
+                `}
             </div>
-            
-            <!-- Info column -->
-            <div class="flex flex-col flex-1 justify-between">
-                <!-- Top row: Session ID -->
-                <h4 class="font-medium text-base w-full overflow-hidden text-ellipsis">${id}</h4>
-                
-                <!-- Bottom row: Usage stats -->
+            <div class="flex flex-col flex-1 gap-y-1">
+                <div class="flex justify-between items-center">
+                    <span class="font-medium">${sessionName}</span>
+                    <span class="${timeRemaining <= 180000 ? 'text-froly-600' : 'text-gray-500'}">
+                        ${formatLongDuration(session.expires_at)}
+                    </span>
+                </div>
                 <div class="flex justify-between text-xs text-gray-500">
-                    <span>${usage.files_count}/50 files</span>
-                    <span>${(usage.total_size / (1024 * 1024)).toFixed(2)}MB/250MB</span>
+                    <span>${usage.files_count}/${currentTierLimits.max_files} files</span>
+                    <span>${(usage.total_size / (1024 * 1024)).toFixed(2)}MB/${currentTierLimits.max_size / (1024 * 1024)}MB</span>
                 </div>
             </div>
         </div>
@@ -1951,6 +2009,11 @@ function createSessionElement(session) {
 
     if (isSelectable) {
         sessionDiv.addEventListener('click', () => selectSession(session));
+    } else {
+        const reason = isInCooldown ? 'Session in cooldown' : 
+                      remainingFiles < queueFiles ? 'Not enough file slots available' : 
+                      'Insufficient storage space';
+        sessionDiv.setAttribute('title', reason);
     }
 
     return sessionDiv;
@@ -1975,32 +2038,102 @@ function haveSessionsChanged(newSessions) {
    });
 }
 
+function canSessionAcceptQueue(session, selectedFiles) {
+    const currentTierLimits = SESSION_TIERS[session.type][session.tier.current];
+    
+    // Calculate remaining capacity
+    const remainingFiles = currentTierLimits.max_files - (session.usage?.files_count || 0);
+    const remainingSize = currentTierLimits.max_size - (session.usage?.total_size || 0);
+
+    // Calculate queue requirements
+    const queueFiles = selectedFiles.length;
+    const queueSize = selectedFiles.reduce((total, file) => total + file.size, 0);
+
+    return {
+        canAccept: remainingFiles >= queueFiles && remainingSize >= queueSize,
+        remainingFiles,
+        remainingSize: remainingSize / (1024 * 1024), // Convert to MB
+        reason: remainingFiles < queueFiles ? 
+            'Not enough file slots available' : 
+            remainingSize < queueSize ? 
+                'Not enough storage space available' : 
+                'Can accept queue'
+    };
+}
+
 // Function to update sessions list
 async function updateSessionsList() {
     try {
         const newSessions = await getActiveSessions();
+        console.log('Active sessions before filter:', newSessions);
         activeSessionsList.innerHTML = '';
-        
+
+        // Get queue files
+        const selectedFiles = Array.from(document.querySelectorAll('.preview-item input[type="checkbox"]:checked'))
+            .map(checkbox => {
+                const previewItem = checkbox.closest('.preview-item');
+                return {
+                    size: parseInt(previewItem.getAttribute('data-file-size')),
+                    file: previewItem.file
+                };
+            });
+
+        const totalQueueSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+        const queueFileCount = document.querySelectorAll('.preview-item input[type="checkbox"]:checked').length;
+        console.log('Queue count:', queueFileCount);
+
+        console.log('Queue stats:', { queueFileCount, totalQueueSize }); // Debug log
+
         // Add "New Session" option
         const newSessionDiv = createNewSessionOption();
         activeSessionsList.appendChild(newSessionDiv);
 
-        if (newSessions && newSessions.length > 0) {
-            const validSessions = newSessions.filter(session => session && session.tier);
+        if (newSessions?.length > 0) {
+            // Safe filtering with null checks
+            const validSessions = newSessions.filter(session => {
+                const now = new Date();
+                const expiresAt = session.expires_at?.toDate?.();
+                const isActive = expiresAt ? now < expiresAt : false;
+                const tierLimits = SESSION_TIERS[session.type || 'guest'][session.tier?.current || 1];
+
+                console.log('Session check:', {
+                    sessionId: session.id,
+                    expiresAt,
+                    isActive,
+                    now
+                });
+
+                if (!session?.expires_at?.toDate) return false;
+                if (new Date() > session.expires_at.toDate()) return false;
+                if (!tierLimits) return false;
             
+                // No queue items = show all active sessions
+                if (queueFileCount === 0) return isActive;
+            
+                // Otherwise check capacity
+                const currentUsage = session.usage || { files_count: 0, total_size: 0 };
+                const remainingFiles = tierLimits.max_files - currentUsage.files_count;
+                const remainingSize = tierLimits.max_size - currentUsage.total_size;
+
+                return isActive && remainingFiles >= queueFileCount && remainingSize >= totalQueueSize;
+            });
+            
+            console.log('Valid sessions after filter:', validSessions);
+
             if (validSessions.length > 0) {
                 validSessions.forEach(session => {
                     const sessionElement = createSessionElement(session);
-                    activeSessionsList.appendChild(sessionElement);
+                    if (sessionElement) {
+                        activeSessionsList.appendChild(sessionElement);
+                    }
                 });
             } else {
-                addNoSessionsMessage('No active sessions available');
+                addNoSessionsMessage('No sessions with sufficient capacity available');
             }
         } else {
             addNoSessionsMessage('No active sessions found');
         }
 
-        handleSelectedSessionValidity(newSessions);
     } catch (error) {
         console.error('Error updating sessions list:', error);
         activeSessionsList.innerHTML = `
@@ -2008,9 +2141,22 @@ async function updateSessionsList() {
                 Error loading sessions
             </div>
         `;
-        resetSelectedSession();
     }
 }
+
+// Add event listener to checkboxes for real-time updates
+function initializeCheckboxListeners() {
+    document.querySelectorAll('.preview-item input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            updateSessionsList();
+        });
+    });
+ }
+
+ // Call this when initializing the upload view
+document.addEventListener('DOMContentLoaded', () => {
+    initializeCheckboxListeners();
+ });
 
 function createNewSessionOption() {
     const div = document.createElement('div');
@@ -2108,14 +2254,6 @@ document.querySelectorAll('.preview-item input[type="checkbox"]').forEach(checkb
     });
 });
 
-function canSessionAcceptQueue(session, queueSize) {
-    const remainingStorage = (250 * 1024 * 1024) - session.usage.total_size;
-    const remainingFiles = 50 - session.usage.files_count;
-    const selectedCount = document.querySelectorAll('.preview-item input[type="checkbox"]:checked').length;
-    
-    return remainingStorage >= queueSize && remainingFiles >= selectedCount;
-}
-
 // Initial setup
 updateSessionsList();
 setInterval(updateSessionsList, 10000); // Update every 10 seconds
@@ -2143,7 +2281,9 @@ async function getActiveSessions() {
                                  new Date(session.tier.current_cooldown_ends_at).getTime() - now : 0,
                     usage: session.usage || { files_count: 0, total_size: 0 },
                     preview_image: session.preview_image,
-                    tier: session.tier
+                    tier: session.tier,
+                    expires_at: session.expires_at, // Add this line
+                    type: session.type // Add this too for tier limits
                 });
             }
         });

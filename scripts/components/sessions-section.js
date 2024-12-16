@@ -219,7 +219,7 @@ function getSessionDisplayName(session) {
         return session.name;
     }
     // Fallback to ID with prefix
-    return `Session ${session.id.substring(0, 6)}`;
+    return `Session ${session.id.substring(0, 3)}...${session.id.slice(-3)}`;
 }
 
 function isValidTimestamp(timestamp) {
@@ -246,6 +246,23 @@ function formatTimeRemaining(timestamp) {
     } catch {
         return 'N/A';
     }
+}
+
+function initializeTimeUpdates() {
+    const UPDATE_INTERVAL = 10000; // 10 seconds
+
+    setInterval(() => {
+        const sessionHeaders = document.querySelectorAll('.session-tab-list-item');
+        
+        sessionHeaders.forEach(header => {
+            const createdSpan = header.querySelector('.text-sm.text-silver-chalice-400.italic');
+            const timestamp = createdSpan.dataset.timestamp; // Add this data attribute
+            
+            if (timestamp) {
+                createdSpan.textContent = `Created ${formatCreatedTime(new Date(parseInt(timestamp)))}`;
+            }
+        });
+    }, UPDATE_INTERVAL);
 }
 
 function formatCreatedTime(timestamp) {
@@ -277,7 +294,27 @@ function formatCreatedTime(timestamp) {
     }
 }
 
+function formatLongDuration(expiresAt) {
+    if (!expiresAt?.toDate) return '';
+    
+    const expiry = expiresAt.toDate();
+    const now = new Date();
+    
+    if (now > expiry) return 'Expired';
+    
+    const timeLeft = expiry - now;
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+ 
+    if (days > 0) return `Expiring in ${days}d`;
+    if (hours > 0) return `Expiring in ${hours}h`;
+    return `Expiring in ${minutes}m`;
+ }
+
 function createSessionElement(session) {
+    const createdTimestamp = session.created_at?.toDate?.() || new Date();
+
     const template = `
         <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col" data-body-expanded="false">
             <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer hover:bg-silver-chalice-50">
@@ -294,7 +331,7 @@ function createSessionElement(session) {
                     <div class="flex gap-x-2">
                         <span class="text-sm text-silver-chalice-400 italic">Created ${formatCreatedTime(session.created_at)}</span>
                         <span class="text-sm text-silver-chalice-400 italic">•</span>
-                        <span class="text-sm text-silver-chalice-400 italic">Expiring in ${formatTimeRemaining(session.expires_at)}</span>
+                        <span class="text-sm text-silver-chalice-400 italic">${formatLongDuration(session.expires_at)}</span>
                     </div>
                 </div>
                 <div class="flex-[2] h-full min-h-10 flex flex-col justify-center gap-y-1">
@@ -471,6 +508,7 @@ function initializeSessionRename(sessionElement, session) {
 
 // Initialize when document is ready
 document.addEventListener('DOMContentLoaded', initializeSessionsList);
+document.addEventListener('DOMContentLoaded', initializeTimeUpdates);
 
 // Export for use in other modules
 export { initializeSessionsList, initializeSessionRename };
