@@ -263,6 +263,19 @@ async function handleFiles(files) {
         previewGrid.innerHTML = '';
     }
 
+    const currentItems = document.querySelectorAll('.preview-item input[type="checkbox"]:checked');
+   const currentCount = currentItems.length;
+   const currentSize = Array.from(currentItems).reduce((total, item) => {
+       return total + parseInt(item.closest('.preview-item').getAttribute('data-file-size') || 0);
+   }, 0);
+
+   const newFilesSize = Array.from(files).reduce((total, file) => total + file.size, 0);
+
+   if (!validateQueueAddition(currentCount, currentSize, files.length, newFilesSize)) {
+       showErrorToast(`Queue limit exceeded. Maximum ${QUEUE_LIMITS.maxFiles} files or ${QUEUE_LIMITS.maxSize / (1024 * 1024)}MB allowed.`);
+       return;
+   }
+
     files.forEach(file => {
         const validation = validateFile(file);
         const { previewItem, progressFill, statusText } = createPreviewItem(file, validation);
@@ -553,7 +566,7 @@ selectAllCheckbox.addEventListener('change', (e) => {
 // Constants for queue limits
 const QUEUE_LIMITS = {
     maxFiles: 10,
-    maxSize: 50 * 1024 * 1024 // 50MB in bytes
+    maxSize: 50 * 1024 * 1024 // 50MB
 };
 
 async function updateQueueStats() {
@@ -618,6 +631,14 @@ function initQueueStats() {
     
     const observer = new MutationObserver(updateQueueStats);
     observer.observe(previewGrid, { childList: true, subtree: true });
+}
+
+function validateQueueAddition(currentCount, currentSize, newCount, newSize) {
+    const totalCount = currentCount + newCount;
+    const totalSize = currentSize + newSize;
+    
+    return totalCount <= QUEUE_LIMITS.maxFiles && 
+           totalSize <= QUEUE_LIMITS.maxSize;
 }
 
 // Handle "Select All" with validation
@@ -1443,6 +1464,12 @@ async function updateProcessButtonState() {
 
 // Function to show error toast
 function showErrorToast(message) {
+    // Remove any existing toast
+    const existingToast = document.querySelector('.error-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50 transition-opacity duration-300';
     toast.textContent = message;
@@ -2065,7 +2092,6 @@ function canSessionAcceptQueue(session, selectedFiles) {
 async function updateSessionsList() {
     try {
         const newSessions = await getActiveSessions();
-        console.log('Active sessions before filter:', newSessions);
         activeSessionsList.innerHTML = '';
 
         // Get queue files
@@ -2080,28 +2106,30 @@ async function updateSessionsList() {
 
         const totalQueueSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
         const queueFileCount = document.querySelectorAll('.preview-item input[type="checkbox"]:checked').length;
-        console.log('Queue count:', queueFileCount);
-
-        console.log('Queue stats:', { queueFileCount, totalQueueSize }); // Debug log
 
         // Add "New Session" option
         const newSessionDiv = createNewSessionOption();
         activeSessionsList.appendChild(newSessionDiv);
 
         if (newSessions?.length > 0) {
+            // First filter for active sessions
+            const activeSessions = newSessions.filter(session => {
+                const expiresAt = session.expires_at?.toDate?.();
+                return expiresAt && new Date() < expiresAt;
+            });
+
+            // First filter for active sessions
+            if (activeSessions.length === 0) {
+                addNoSessionsMessage('No active sessions found');
+                return;
+            }
+
             // Safe filtering with null checks
             const validSessions = newSessions.filter(session => {
                 const now = new Date();
                 const expiresAt = session.expires_at?.toDate?.();
                 const isActive = expiresAt ? now < expiresAt : false;
                 const tierLimits = SESSION_TIERS[session.type || 'guest'][session.tier?.current || 1];
-
-                console.log('Session check:', {
-                    sessionId: session.id,
-                    expiresAt,
-                    isActive,
-                    now
-                });
 
                 if (!session?.expires_at?.toDate) return false;
                 if (new Date() > session.expires_at.toDate()) return false;
@@ -2118,8 +2146,6 @@ async function updateSessionsList() {
                 return isActive && remainingFiles >= queueFileCount && remainingSize >= totalQueueSize;
             });
             
-            console.log('Valid sessions after filter:', validSessions);
-
             if (validSessions.length > 0) {
                 validSessions.forEach(session => {
                     const sessionElement = createSessionElement(session);
@@ -2130,10 +2156,7 @@ async function updateSessionsList() {
             } else {
                 addNoSessionsMessage('No sessions with sufficient capacity available');
             }
-        } else {
-            addNoSessionsMessage('No active sessions found');
         }
-
     } catch (error) {
         console.error('Error updating sessions list:', error);
         activeSessionsList.innerHTML = `

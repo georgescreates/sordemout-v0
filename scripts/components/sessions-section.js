@@ -1,5 +1,5 @@
 import { db } from '../firebase-config.js';
-import { getDoc, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { collection, query, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -37,15 +37,20 @@ document.addEventListener('DOMContentLoaded', function() {
 let sessionItem = Array.from(document.getElementsByClassName('session-tab-list-item'));
 let sessionItemHead = Array.from(document.getElementsByClassName('session-item-header'));
 let sessionItemBody = Array.from(document.getElementsByClassName('session-item-body'));
+const sessionItemsContainer = document.querySelector('.sessions-tab-list');
 
-sessionItem.forEach((item, index) => {
-    item.addEventListener('click', () => {
+sessionItemsContainer.addEventListener('click', (event) => {
+    const sessionItem = event.target.closest('.session-tab-list-item');
+    if (sessionItem) {
+        // Get the index of the clicked session item
+        const index = Array.from(sessionItem.parentNode.children).indexOf(sessionItem);
+
         // Get current state from data attribute
-        const isExpanded = item.dataset.bodyExpanded === "true";
-        
+        const isExpanded = sessionItem.dataset.bodyExpanded === "true";
+
         // Toggle the state
-        item.dataset.bodyExpanded = (!isExpanded).toString();
-        
+        sessionItem.dataset.bodyExpanded = (!isExpanded).toString();
+
         // Update the body height if we have a matching body element
         if (sessionItemBody[index]) {
             if (!isExpanded) {
@@ -54,7 +59,7 @@ sessionItem.forEach((item, index) => {
                 sessionItemBody[index].classList.add('hidden');
             }
         }
-    })
+    }
 });
 
 // Get all filter containers
@@ -313,10 +318,12 @@ function formatLongDuration(expiresAt) {
  }
 
 function createSessionElement(session) {
-    const createdTimestamp = session.created_at?.toDate?.() || new Date();
+    const sessionElement = document.createElement('li');
+    sessionElement.className = 'session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col';
+    sessionElement.dataset.bodyExpanded = "false";
+    sessionElement.dataset.sessionId = session.id;
 
-    const template = `
-        <li class="session-tab-list-item border-b border-silver-chalice-300 py-2 w-full h-auto flex flex-col" data-body-expanded="false">
+    sessionElement.innerHTML = `
             <div class="w-full h-10 session-item-header flex justify-between gap-x-4 cursor-pointer hover:bg-silver-chalice-50">
                 <div class="h-full min-h-10 w-8 flex items-center justify-center">
                     <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
@@ -361,13 +368,106 @@ function createSessionElement(session) {
             <div class="session-item-body w-full h-auto px-3 py-2 flex flex-col gap-y-2 hidden">
                 <!-- Body content populated when expanded -->
             </div>
-        </li>
     `;
 
-    const element = document.createElement('div');
-    element.innerHTML = template;
-    return element.firstElementChild;
+    sessionElement.addEventListener('click', (e) => {
+        // If clicked element is a button or inside control elements, ignore
+        if (e.target.closest('.session-file-visibility-btn') || 
+            e.target.closest('.session-file-delete-btn')) {
+            return;
+        }
+    
+        const sessionBody = sessionElement.querySelector('.session-item-body');
+        const currentState = sessionElement.dataset.bodyExpanded === "true";
+        
+        sessionElement.dataset.bodyExpanded = (!currentState).toString();
+        
+        if (!currentState) {
+            sessionBody.classList.remove('hidden');
+            displaySessionFiles(session.id);
+        } else {
+            sessionBody.classList.add('hidden');
+        }
+    });
+
+    return sessionElement;
 }
+
+// In browse-files.js or a new module
+function displaySessionFiles(sessionId) {
+    const sessionElement = document.querySelector(`[data-session-id="${sessionId}"]`);
+    const sessionBody = sessionElement.querySelector('.session-item-body');
+    
+    let galleryContainer = sessionBody.querySelector('.session-item-galery-grid');
+    if (!galleryContainer) {
+        galleryContainer = document.createElement('div');
+        galleryContainer.className = 'session-item-galery-grid flex gap-x-2 w-full h-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:\'none\'] [scrollbar-width:\'none\'] mt-2';
+        sessionBody.appendChild(galleryContainer);
+    }
+ 
+    galleryContainer.innerHTML = '';
+ 
+    const filesRef = collection(db, "sessions", sessionId, "files");
+    getDocs(filesRef).then(querySnapshot => {
+        querySnapshot.forEach(doc => {
+            const fileData = doc.data();
+            const fileElement = document.createElement('div');
+            fileElement.className = 'session-item-file w-[5rem] h-[5rem] bg-silver-chalice-200 rounded shrink-0 p-1.5 group relative';
+            fileElement.dataset.fileId = doc.id;
+            fileElement.dataset.fileVisibility = "true";
+ 
+            fileElement.innerHTML = `
+                <div class="session-item-file-ctas-container flex gap-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="session-file-visibility-btn w-5 h-5 flex items-center justify-center bg-gold-sand-50 rounded">
+                        <svg class="fill-lochmara-950 stroke-lochmara-950 visibility-icon" xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px">
+                            <path d="M480.09-336.92q67.99 0 115.49-47.59t47.5-115.58q0-67.99-47.59-115.49t-115.58-47.5q-67.99 0-115.49 47.59t-47.5 115.58q0 67.99 47.59 115.49t115.58 47.5ZM480-392q-45 0-76.5-31.5T372-500q0-45 31.5-76.5T480-608q45 0 76.5 31.5T588-500q0 45-31.5 76.5T480-392Zm0 172q-126.31 0-231.04-67.39-104.73-67.38-167.19-177.3-5-8.62-7.31-17.37-2.3-8.75-2.3-17.96t2.3-17.94q2.31-8.73 7.31-17.35 62.46-109.92 167.19-177.3Q353.69-780 480-780q126.31 0 231.04 67.39 104.73 67.38 167.19 177.3 5 8.62 7.31 17.37 2.3 8.75 2.3 17.96t-2.3 17.94q-2.31 8.73-7.31 17.35-62.46 109.92-167.19 177.3Q606.31-220 480-220Zm0-280Zm0 220q113 0 207.5-59.5T832-500q-50-101-144.5-160.5T480-720q-113 0-207.5 59.5T128-500q50 101 144.5 160.5T480-280Z"/>
+                        </svg>
+                        <svg class="fill-lochmara-950 stroke-lochmara-950 visibility-off-icon hidden" xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px">
+                            <path d="M595.08-615.08q24.38 24.39 37.69 59.27 13.31 34.89 10.07 70.04 0 11.54-8.3 19.54-8.31 8-19.85 8-11.54 0-19.54-8t-8-19.54q3.85-26.38-4.34-50-8.19-23.61-25.19-40.61t-41-25.81q-24-8.81-50.62-4.58-11.54.39-19.92-7.73-8.39-8.11-8.77-19.65-.39-11.54 7.42-19.93 7.81-8.38 19.35-8.76 34.92-4 70.19 9.11 35.27 13.12 60.81 38.65ZM480-720q-21.31 0-41.81 2.08-20.5 2.07-40.81 6.84-12.77 2.62-23-3.65t-14.07-18.04q-3.85-12.15 2.54-23.11 6.38-10.96 18.53-13.58 24.16-5.77 48.81-8.15Q454.85-780 480-780q128.92 0 236.85 67 107.92 67 165.99 181.31 4 7.61 5.81 15.34 1.81 7.73 1.81 16.35 0 8.62-1.5 16.35-1.5 7.73-5.5 15.34-18.38 38.46-44.69 71.73t-57.93 61.12q-9.3 8.31-21.26 6.88-11.97-1.42-19.66-11.96-7.69-10.54-6.38-22.61 1.31-12.08 10.61-20.39 27.08-24.54 49.39-53.65Q815.85-466.31 832-500q-50-101-144.5-160.5T480-720Zm0 500q-126.31 0-231.54-67.5Q143.23-355 81.16-465.31q-5-7.61-7.31-16.54-2.31-8.92-2.31-18.15 0-9.23 2-17.85 2-8.61 7-16.84 22.31-40.77 50.54-77.66 28.23-36.88 64.92-66.11l-90.31-90.93q-8.3-8.92-8.19-21.19.12-12.27 8.81-20.96 8.69-8.69 21.08-8.69 12.38 0 21.07 8.69l663.08 663.08q8.31 8.31 8.81 20.57.5 12.27-8.81 21.58-8.69 8.69-21.08 8.69-12.38 0-21.07-8.69L628.62-245.85q-35.39 13.69-72.74 19.77Q518.54-220 480-220ZM238.16-636.31q-35.16 27.16-63.2 61.42Q146.92-540.62 128-500q50 101 144.5 160.5T480-280q25.77 0 50.73-3.46 24.96-3.46 49.58-10.69L529.69-346q-12.15 5.31-24.27 7.19-12.11 1.89-25.42 1.89-68.08 0-115.58-47.5T316.92-500q0-13.31 2.08-25.42 2.08-12.12 7-24.27l-87.84-86.62ZM541-531Zm-131.77 65.77Z"/>
+                        </svg>
+                    </button>
+                    <button class="session-file-delete-btn w-5 h-5 flex items-center justify-center bg-gold-sand-50 rounded">
+                        <svg class="fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px">
+                            <path d="M292.31-140q-29.83 0-51.07-21.24Q220-182.48 220-212.31V-720h-10q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q197.25-780 210-780h150q0-14.69 10.35-25.04 10.34-10.34 25.03-10.34h169.24q14.69 0 25.03 10.34Q600-794.69 600-780h150q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q762.75-720 750-720h-10v507.69q0 29.83-21.24 51.07Q697.52-140 667.69-140H292.31ZM680-720H280v507.69q0 5.39 3.46 8.85t8.85 3.46h375.38q5.39 0 8.85-3.46t3.46-8.85V-720ZM406.17-280q12.75 0 21.37-8.62 8.61-8.63 8.61-21.38v-300q0-12.75-8.63-21.38-8.62-8.62-21.38-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.62 21.38 8.63 8.62 21.39 8.62Zm147.69 0q12.75 0 21.37-8.62 8.61-8.63 8.61-21.38v-300q0-12.75-8.62-21.38-8.63-8.62-21.39-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.63 21.38 8.62 8.62 21.38 8.62ZM280-720v520-520Z"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+ 
+            galleryContainer.appendChild(fileElement);
+
+            // Set background after append
+            requestAnimationFrame(() => {
+                fileElement.style.cssText = `
+                    background-image: url('${fileData.storage_url}');
+                    background-size: cover;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                `;
+            });
+        });
+    });
+ }
+  
+  function initializeFileControls() {
+    document.querySelectorAll('.session-file-visibility-btn').forEach(btn => {
+      btn.addEventListener('click', handleVisibilityToggle);
+    });
+    
+    document.querySelectorAll('.session-file-delete-btn').forEach(btn => {
+      btn.addEventListener('click', handleFileDelete);  
+    });
+  }
+  
+  // Call when expanding session item
+  document.querySelectorAll('.session-tab-list-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const sessionId = item.dataset.sessionId;
+      if(item.dataset.bodyExpanded === "true") {
+        displaySessionFiles(sessionId);
+      }
+    });
+  });
 
 function getStatusLabel(session) {
     if (!session.expires_at) {
