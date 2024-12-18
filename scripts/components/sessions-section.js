@@ -1,5 +1,5 @@
 import { db } from '../firebase-config.js';
-import { getDocs, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { getDoc, getDocs, doc, updateDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { collection, query, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -370,23 +370,17 @@ function createSessionElement(session) {
             </div>
     `;
 
-    sessionElement.addEventListener('click', (e) => {
-        // If clicked element is a button or inside control elements, ignore
-        if (e.target.closest('.session-file-visibility-btn') || 
-            e.target.closest('.session-file-delete-btn')) {
-            return;
-        }
-    
-        const sessionBody = sessionElement.querySelector('.session-item-body');
-        const currentState = sessionElement.dataset.bodyExpanded === "true";
+    const header = sessionElement.querySelector('.session-item-header');
+    header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const body = sessionElement.querySelector('.session-item-body');
+        const currentState = body.classList.contains('hidden');
         
-        sessionElement.dataset.bodyExpanded = (!currentState).toString();
-        
-        if (!currentState) {
-            sessionBody.classList.remove('hidden');
+        if (currentState) {
+            body.classList.remove('hidden');
             displaySessionFiles(session.id);
         } else {
-            sessionBody.classList.add('hidden');
+            body.classList.add('hidden');
         }
     });
 
@@ -445,29 +439,57 @@ function displaySessionFiles(sessionId) {
                     background-repeat: no-repeat;
                 `;
             });
+
+            // Add click handler in displaySessionFiles()
+            fileElement.querySelector('.session-file-delete-btn').addEventListener('click', async (e) => {
+                e.stopPropagation();
+
+                if (await handleFileDelete(sessionId, doc.id)) {
+                    fileElement.remove();
+                }
+            });
         });
     });
  }
-  
-  function initializeFileControls() {
-    document.querySelectorAll('.session-file-visibility-btn').forEach(btn => {
-      btn.addEventListener('click', handleVisibilityToggle);
-    });
-    
-    document.querySelectorAll('.session-file-delete-btn').forEach(btn => {
-      btn.addEventListener('click', handleFileDelete);  
-    });
-  }
-  
-  // Call when expanding session item
-  document.querySelectorAll('.session-tab-list-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const sessionId = item.dataset.sessionId;
-      if(item.dataset.bodyExpanded === "true") {
-        displaySessionFiles(sessionId);
-      }
-    });
-  });
+
+async function handleFileDelete(sessionId, fileId) {
+    const sessionRef = doc(db, "sessions", sessionId);
+    const sessionSnap = await getDoc(sessionRef);
+    const session = sessionSnap.data();
+
+    // Check remaining files count
+    const filesRef = collection(db, "sessions", sessionId, "files");
+    const filesSnap = await getDocs(filesRef);
+
+    if (filesSnap.size <= 3) {
+        showError("Cannot delete - minimum 3 files required");
+        return false;
+    }
+
+    try {
+        // Delete from Firestore
+        await deleteDoc(doc(filesRef, fileId));
+
+        // Update session stats
+        await updateDoc(sessionRef, {
+            "usage.files_count": increment(-1),
+            "usage.total_size": increment(-session.files[fileId].size)
+        });
+
+        return true;
+    } catch (error) {
+        console.error("Error deleting file:", error);
+        return false;
+    }
+}
+
+function showError(message) {
+    const errorToast = document.createElement('div');
+    errorToast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg';
+    errorToast.textContent = message;
+    document.body.appendChild(errorToast);
+    setTimeout(() => errorToast.remove(), 3000);
+}
 
 function getStatusLabel(session) {
     if (!session.expires_at) {
