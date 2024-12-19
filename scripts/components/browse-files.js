@@ -1,5 +1,5 @@
 import { uploadFileToStorage } from '../services/storage.js';
-import { handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles } from '../services/session.js';
+import { handleUploadBatch, isSessionActive, canAddFiles } from '../services/session.js';
 import { collection, addDoc, getDocs } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { db } from '../firebase-config.js';
 import { getDoc, doc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -1645,13 +1645,13 @@ processButton.addEventListener('click', async (e) => {
                     statusText.textContent = 'Upload complete';
                     previewItem.uploadedUrl = progress.downloadURL;
                     
-                    updateSessionFiles(session, {
-                        name: previewItem.file.name,
-                        size: previewItem.file.size,
-                        upload_time: new Date(),
-                        storage_url: progress.downloadURL,
-                        processed: false
-                    });
+                    // updateSessionFiles(session, {
+                    //     name: previewItem.file.name,
+                    //     size: previewItem.file.size,
+                    //     upload_time: new Date(),
+                    //     storage_url: progress.downloadURL,
+                    //     processed: false
+                    // });
                 }
             }, sessionId).catch(error => {
                 progressFill.className = 'h-full bg-red-500 transition-all duration-300';

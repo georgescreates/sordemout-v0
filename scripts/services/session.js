@@ -98,49 +98,49 @@ async function handleUploadBatch() {
 }
 
 // Update session with file info
-async function updateSessionFiles(sessionId, fileInfo) {
-    const sessionRef = doc(db, "sessions", sessionId);
-    const batch = writeBatch(db);
+// async function updateSessionFiles(sessionId, fileInfo) {
+//     const sessionRef = doc(db, "sessions", sessionId);
+//     const batch = writeBatch(db);
     
-    const sessionSnap = await getDoc(sessionRef);
-    const session = sessionSnap.data();
+//     const sessionSnap = await getDoc(sessionRef);
+//     const session = sessionSnap.data();
     
-    // Add file to files collection
-    const fileRef = collection(db, "sessions", sessionId, "files");
-    batch.set(doc(fileRef), fileInfo);
+//     // Add file to files collection
+//     const fileRef = collection(db, "sessions", sessionId, "files");
+//     batch.set(doc(fileRef), fileInfo);
     
-    const updates = {
-        "usage.files_count": increment(1),
-        "usage.total_size": increment(fileInfo.size)
-    };
+//     const updates = {
+//         "usage.files_count": increment(1),
+//         "usage.total_size": increment(fileInfo.size)
+//     };
 
-    // Set preview if none exists or if smaller
-    if (!session.preview_image || fileInfo.size < session.preview_image_size) {
-        updates.preview_image = fileInfo.storage_url;
-        updates.preview_image_size = fileInfo.size;
-    }
+//     // Set preview if none exists or if smaller
+//     if (!session.preview_image || fileInfo.size < session.preview_image_size) {
+//         updates.preview_image = fileInfo.storage_url;
+//         updates.preview_image_size = fileInfo.size;
+//     }
     
-    // Check if this update triggers cooldown
-    const currentTier = session.tier.current;
-    const tierLimits = SESSION_TIERS[session.type][currentTier];
+//     // Check if this update triggers cooldown
+//     const currentTier = session.tier.current;
+//     const tierLimits = SESSION_TIERS[session.type][currentTier];
     
-    const newFileCount = session.usage.files_count + 1;
-    const newTotalSize = session.usage.total_size + fileInfo.size;
+//     const newFileCount = session.usage.files_count + 1;
+//     const newTotalSize = session.usage.total_size + fileInfo.size;
     
-    if (newFileCount >= tierLimits.max_files || newTotalSize >= tierLimits.max_size) {
-        if (currentTier < 3) {
-            const now = Date.now();
-            const nextTier = SESSION_TIERS[session.type][currentTier + 1];
+//     if (newFileCount >= tierLimits.max_files || newTotalSize >= tierLimits.max_size) {
+//         if (currentTier < 3) {
+//             const now = Date.now();
+//             const nextTier = SESSION_TIERS[session.type][currentTier + 1];
             
-            updates["tier.cooldowns_used"] = increment(1);
-            updates["tier.current_cooldown_ends_at"] = new Date(now + nextTier.cooldown_duration);
-            updates["tier.last_cooldown_at"] = new Date(now);
-        }
-    }
+//             updates["tier.cooldowns_used"] = increment(1);
+//             updates["tier.current_cooldown_ends_at"] = new Date(now + nextTier.cooldown_duration);
+//             updates["tier.last_cooldown_at"] = new Date(now);
+//         }
+//     }
 
-    batch.update(sessionRef, updates);
-    await batch.commit();
-}
+//     batch.update(sessionRef, updates);
+//     await batch.commit();
+// }
 
 async function isSessionActive() {
     const sessionId = localStorage.getItem('sessionId');
@@ -254,4 +254,4 @@ async function canAddFiles(fileCount, totalSize) {
     };
 }
 
-export { SESSION_TIERS, createSession, checkSession, handleUploadBatch, updateSessionFiles, isSessionActive, canAddFiles };
+export { SESSION_TIERS, createSession, checkSession, handleUploadBatch, isSessionActive, canAddFiles };
