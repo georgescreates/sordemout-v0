@@ -1636,16 +1636,15 @@ processButton.addEventListener('click', async (e) => {
                     showErrorToast(`Upload failed: ${progress.error}`);
                     return;
                 }
- 
+            
                 progressFill.style.width = `${progress.progress}%`;
                 statusText.textContent = `${Math.round(progress.progress)}% • ${progress.speed}MB/s`;
- 
+            
                 if (progress.status === 'complete') {
                     progressFill.className = 'h-full bg-green-500 transition-all duration-300';
                     statusText.textContent = 'Upload complete';
                     previewItem.uploadedUrl = progress.downloadURL;
                     
-                    // Update session with file info
                     updateSessionFiles(session, {
                         name: previewItem.file.name,
                         size: previewItem.file.size,
@@ -1654,7 +1653,7 @@ processButton.addEventListener('click', async (e) => {
                         processed: false
                     });
                 }
-            }).catch(error => {
+            }, sessionId).catch(error => {
                 progressFill.className = 'h-full bg-red-500 transition-all duration-300';
                 statusText.textContent = 'Upload failed';
                 console.error('Upload error:', error);

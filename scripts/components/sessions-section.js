@@ -372,7 +372,10 @@ function createSessionElement(session) {
 
     const header = sessionElement.querySelector('.session-item-header');
     header.addEventListener('click', (e) => {
-        e.stopPropagation();
+        if (e.target.closest('.no-collapse')) {
+            return;
+        }
+        
         const body = sessionElement.querySelector('.session-item-body');
         const currentState = body.classList.contains('hidden');
         
@@ -382,34 +385,42 @@ function createSessionElement(session) {
         } else {
             body.classList.add('hidden');
         }
+    
     });
 
     return sessionElement;
 }
 
 // In browse-files.js or a new module
-function displaySessionFiles(sessionId) {
+async function displaySessionFiles(sessionId) {
     const sessionElement = document.querySelector(`[data-session-id="${sessionId}"]`);
     const sessionBody = sessionElement.querySelector('.session-item-body');
+
+    console.log('Setting up session listener');
     
     let galleryContainer = sessionBody.querySelector('.session-item-galery-grid');
     if (!galleryContainer) {
         galleryContainer = document.createElement('div');
-        galleryContainer.className = 'session-item-galery-grid flex gap-x-2 w-full h-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:\'none\'] [scrollbar-width:\'none\'] mt-2';
+        galleryContainer.className = 'session-item-galery-grid no-collapse flex gap-x-2 w-full h-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:\'none\'] [scrollbar-width:\'none\'] mt-2';
         sessionBody.appendChild(galleryContainer);
     }
  
     galleryContainer.innerHTML = '';
  
     const filesRef = collection(db, "sessions", sessionId, "files");
+
+    const filesSnap = await getDocs(filesRef);
+    console.log('Files fetched:', filesSnap.size);
+    filesSnap.forEach(doc => console.log('File doc:', doc.id));
+
     getDocs(filesRef).then(querySnapshot => {
         querySnapshot.forEach(doc => {
             const fileData = doc.data();
             const fileElement = document.createElement('div');
-            fileElement.className = 'session-item-file w-[5rem] h-[5rem] bg-silver-chalice-200 rounded shrink-0 p-1.5 group relative';
+            fileElement.className = 'session-item-file w-[5rem] h-[5rem] bg-silver-chalice-200 rounded shrink-0 p-1.5 group';
             fileElement.dataset.fileId = doc.id;
             fileElement.dataset.fileVisibility = "true";
- 
+
             fileElement.innerHTML = `
                 <div class="session-item-file-ctas-container flex gap-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button class="session-file-visibility-btn w-5 h-5 flex items-center justify-center bg-gold-sand-50 rounded">
@@ -421,14 +432,16 @@ function displaySessionFiles(sessionId) {
                         </svg>
                     </button>
                     <button class="session-file-delete-btn w-5 h-5 flex items-center justify-center bg-gold-sand-50 rounded">
-                        <svg class="fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px">
+                        <svg class="delete-icon fill-lochmara-950 stroke-lochmara-950" xmlns="http://www.w3.org/2000/svg" height="16px" viewBox="0 -960 960 960" width="16px">
                             <path d="M292.31-140q-29.83 0-51.07-21.24Q220-182.48 220-212.31V-720h-10q-12.75 0-21.37-8.63-8.63-8.63-8.63-21.38 0-12.76 8.63-21.37Q197.25-780 210-780h150q0-14.69 10.35-25.04 10.34-10.34 25.03-10.34h169.24q14.69 0 25.03 10.34Q600-794.69 600-780h150q12.75 0 21.37 8.63 8.63 8.63 8.63 21.38 0 12.76-8.63 21.37Q762.75-720 750-720h-10v507.69q0 29.83-21.24 51.07Q697.52-140 667.69-140H292.31ZM680-720H280v507.69q0 5.39 3.46 8.85t8.85 3.46h375.38q5.39 0 8.85-3.46t3.46-8.85V-720ZM406.17-280q12.75 0 21.37-8.62 8.61-8.63 8.61-21.38v-300q0-12.75-8.63-21.38-8.62-8.62-21.38-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.62 21.38 8.63 8.62 21.39 8.62Zm147.69 0q12.75 0 21.37-8.62 8.61-8.63 8.61-21.38v-300q0-12.75-8.62-21.38-8.63-8.62-21.39-8.62-12.75 0-21.37 8.62-8.61 8.63-8.61 21.38v300q0 12.75 8.63 21.38 8.62 8.62 21.38 8.62ZM280-720v520-520Z"/>
+                        </svg>
+                        <svg class="loading-icon hidden w-3 h-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                     </button>
                 </div>
             `;
- 
-            galleryContainer.appendChild(fileElement);
 
             // Set background after append
             requestAnimationFrame(() => {
@@ -440,42 +453,155 @@ function displaySessionFiles(sessionId) {
                 `;
             });
 
-            // Add click handler in displaySessionFiles()
             fileElement.querySelector('.session-file-delete-btn').addEventListener('click', async (e) => {
+                e.preventDefault();
                 e.stopPropagation();
 
-                if (await handleFileDelete(sessionId, doc.id)) {
-                    fileElement.remove();
+                // Show loading state
+                const deleteIcon = fileElement.querySelector('.delete-icon');
+                const loadingIcon = fileElement.querySelector('.loading-icon');
+                deleteIcon.classList.add('hidden');
+                loadingIcon.classList.remove('hidden');
+
+                // Disable button during deletion
+                const deleteBtn = fileElement.querySelector('.session-file-delete-btn');
+                deleteBtn.disabled = true;
+
+                try {
+                    if (await handleFileDelete(sessionId, doc.id)) {
+                        fileElement.remove();
+                        showSuccessToast('File deleted successfully');
+                    } else {
+                        deleteIcon.classList.remove('hidden');
+                        loadingIcon.classList.add('hidden');
+                        deleteBtn.disabled = false;
+                    }
+                } catch (error) {
+                    deleteIcon.classList.remove('hidden');
+                    loadingIcon.classList.add('hidden');
+                    deleteBtn.disabled = false;
+                }
+            });
+
+            galleryContainer.appendChild(fileElement);
+        });
+    });
+
+    let controlsWrapper = sessionBody.querySelector('.session-item-body-controls-wrapper');
+    if(!controlsWrapper) {
+        controlsWrapper = document.createElement('div');
+        controlsWrapper.className = 'session-item-body-controls-wrapper w-full h-10 flex gap-x-5';
+        sessionBody.appendChild(controlsWrapper);
+
+        controlsWrapper.innerHTML = '';
+    }
+
+    let thresholdControlsWrapper = sessionBody.querySelector('.session-item-controls-threshold-wrapper');
+    if(!thresholdControlsWrapper){
+        thresholdControlsWrapper = document.createElement('div');
+        thresholdControlsWrapper.className = 'w-[30%] h-full flex gap-x-4 items-center whitespace-nowrap';
+        controlsWrapper.appendChild(thresholdControlsWrapper);
+
+        thresholdControlsWrapper.innerHTML = `
+        <h5 class="font-medium">Range :</h5>
+        <div class="session-slider-container relative w-full">
+            <div class="relative h-6 flex items-center">
+                <div class="base-track absolute w-full h-1 bg-silver-chalice-200 rounded"></div>
+                <div class="active-track absolute h-1 bg-lochmara-600 rounded" style="left: 30%; right: 30%"></div>
+                
+                <div class="min-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 30%">
+                    <span class="min-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                        60%
+                    </span>
+                </div>
+                
+                <div class="max-handle absolute w-4 h-4 bg-white border-2 border-lochmara-600 rounded-full cursor-pointer -ml-2 hover:bg-lochmara-50" style="left: 70%">
+                    <span class="max-value absolute bottom-full left-1/2 -translate-x-1/2 -translate-y-1 opacity-0 text-xs bg-white px-1.5 py-0.5 rounded border border-silver-chalice-200 pointer-events-none transition-opacity">
+                        80%
+                    </span>
+                </div>
+            </div>
+        </div>
+        `
+    }
+
+    let filterControlsWrapper = sessionBody.querySelector('.session-item-controls-filters-wrapper');
+    if(!filterControlsWrapper){
+        filterControlsWrapper = document.createElement('div');
+        filterControlsWrapper.className = 'w-[70%] h-full flex gap-x-4 items-center whitespace-nowrap';
+        controlsWrapper.appendChild(filterControlsWrapper);
+
+        filterControlsWrapper.innerHTML = '';
+
+        const categoryMap = new Map();
+
+        getDocs(filesRef).then(querySnapshot => {
+            querySnapshot.forEach(doc => {
+                const fileData = doc.data();
+                if(fileData.categories) {
+                    fileData.categories.forEach(category => {
+                        categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
+                    });
+                }else{
+                    document.querySelector('.session-filters').innerHTML = `
+                    <span class="text-silver-chalice-400 italic">No categories found</span>
+                    `;
                 }
             });
         });
-    });
+
+        filterControlsWrapper.innerHTML = `
+            <h5 class="font-medium">Filters :</h5>
+            <div class="session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+                ${Array.from(categoryMap).map(([category, count]) => `
+                    <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                        <div class="flex items-center gap-x-2 h-full">
+                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">${category}</label>
+                        </div>
+                        <div class="flex items-center">
+                            <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Add filter change handlers
+        filterControlsWrapper.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                updateFilteredFiles(sessionId, getSelectedFilters(filterControlsWrapper));
+            });
+        });
+    }
  }
 
-async function handleFileDelete(sessionId, fileId) {
-    const sessionRef = doc(db, "sessions", sessionId);
-    const sessionSnap = await getDoc(sessionRef);
-    const session = sessionSnap.data();
+ function getSelectedFilters(wrapper) {
+    return Array.from(wrapper.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(cb => cb.nextElementSibling.textContent);
+}
 
-    // Check remaining files count
+ async function handleFileDelete(sessionId, fileId) {
+    const sessionRef = doc(db, "sessions", sessionId);
+    const fileRef = doc(collection(db, "sessions", sessionId, "files"), fileId);
+    
+    const fileSnap = await getDoc(fileRef);
+    const fileData = fileSnap.data();
+
     const filesRef = collection(db, "sessions", sessionId, "files");
     const filesSnap = await getDocs(filesRef);
-
+    
     if (filesSnap.size <= 3) {
         showError("Cannot delete - minimum 3 files required");
         return false;
     }
 
     try {
-        // Delete from Firestore
-        await deleteDoc(doc(filesRef, fileId));
-
-        // Update session stats
+        await deleteDoc(fileRef);
         await updateDoc(sessionRef, {
             "usage.files_count": increment(-1),
-            "usage.total_size": increment(-session.files[fileId].size)
+            "usage.total_size": increment(-fileData.size) // Using size from the file data
         });
-
         return true;
     } catch (error) {
         console.error("Error deleting file:", error);
@@ -485,10 +611,18 @@ async function handleFileDelete(sessionId, fileId) {
 
 function showError(message) {
     const errorToast = document.createElement('div');
-    errorToast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded shadow-lg';
+    errorToast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-froly-600 text-white px-4 py-2 rounded shadow-lg';
     errorToast.textContent = message;
     document.body.appendChild(errorToast);
     setTimeout(() => errorToast.remove(), 3000);
+}
+
+function showSuccessToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-puerto-rico-500 text-white px-4 py-2 rounded shadow-lg';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 function getStatusLabel(session) {
