@@ -112,7 +112,7 @@ async function getImageFeatures(imageUrl) {
 
 async function pollPredictionStatus(predictionId) {
     const maxAttempts = 15; // 30 seconds total
-    const interval = 2000; // 2 seconds
+    const interval = 6000; // 2 seconds
     let attempts = 0;
 
     while (attempts < maxAttempts) {
@@ -155,8 +155,10 @@ function calculateSimilarity(embedding1, embedding2) {
         console.log('Raw embedding 1:', JSON.stringify(embedding1));
         console.log('Raw embedding 2:', JSON.stringify(embedding2));
 
-        // Try to extract the actual numeric arrays
-        let array1, array2;
+        // Limit vector size for performance
+        const maxLength = 512;
+        const array1 = Array.isArray(embedding1) ? embedding1.flat() : embedding1;
+        const array2 = Array.isArray(embedding2) ? embedding2.flat() : embedding2;
 
         if (Array.isArray(embedding1)) {
             array1 = embedding1;
@@ -258,4 +260,139 @@ function groupSimilarImages(images, threshold = 0.8) {
     return groups;
 }
 
-export { getImageFeatures, calculateSimilarity, groupSimilarImages, getCategoriesForImage };
+const CONCEPT_EMBEDDINGS = {
+    // People and portraits
+   person: [/* normalized vector */],
+   portrait: [/* normalized vector */],
+   crowd: [/* normalized vector */],
+   
+   // Technology and digital
+   technology: [/* normalized vector */],
+   digital: [/* normalized vector */],
+   network: [/* normalized vector */],
+   
+   // General concepts
+   abstract: [/* normalized vector */],
+   modern: [/* normalized vector */],
+   vintage: [/* normalized vector */],
+   minimalist: [/* normalized vector */],
+   artistic: [/* normalized vector */],
+
+   // Environments
+   indoor: [/* normalized vector */],
+   outdoor: [/* normalized vector */],
+   urban: [/* normalized vector */],
+   nature: [/* normalized vector */]
+ };
+
+ const CONCEPT_PATTERNS = {
+    style: ['artistic', 'modern', 'vintage', 'minimalist', 'colorful', 'abstract'],
+    scene: ['indoor', 'outdoor', 'urban', 'natural', 'night', 'day'],
+    composition: ['portrait', 'landscape', 'close-up', 'wide-shot'],
+    subject: ['person', 'people', 'technology', 'nature', 'architecture']
+};
+
+function extractConceptsFromDescription(description) {
+    if (!description || typeof description !== 'string') {
+        console.log('Description:', description);
+        return [];
+    }
+    
+    const concepts = new Set();
+    const text = description.toString().toLowerCase();
+ 
+    Object.values(CONCEPT_PATTERNS).flat().forEach(concept => {
+        if (text.includes(concept)) {
+            concepts.add(concept);
+        }
+    });
+ 
+    return Array.from(concepts);
+}
+
+ async function getConceptualCategories(clipFeatures, sessionImages, threshold = 0.5) {
+    try {
+        console.log("Input CLIP features:", clipFeatures);
+ 
+        const conceptResults = await Promise.all(
+            Object.entries(CONCEPT_EMBEDDINGS).map(async ([concept, embedding]) => {
+                const similarity = await calculateSimilarity(clipFeatures, embedding);
+                return {
+                    concept,
+                    similarity
+                };
+            })
+        );
+ 
+        console.log("Concept similarities:", conceptResults);
+ 
+        return conceptResults
+            .filter(result => result.similarity > threshold)
+            .sort((a, b) => b.similarity - a.similarity)
+            .map(result => result.concept);
+ 
+    } catch (error) {
+        console.error("Error in conceptual categorization:", error);
+        return [];
+    }
+}
+
+async function getPrecomputedEmbeddings() {
+    const conceptImages = {
+        person: await getImageFeatures('PATH_TO_REPRESENTATIVE_PERSON_IMAGE'),
+        portrait: await getImageFeatures('PATH_TO_PORTRAIT_IMAGE'),
+        technology: await getImageFeatures('PATH_TO_TECH_IMAGE'),
+        // etc
+    };
+ 
+    const embeddings = {};
+    for (const [concept, features] of Object.entries(conceptImages)) {
+        embeddings[concept] = normalizeVector(features);
+    }
+ 
+    console.log('Precomputed embeddings:', embeddings);
+    return embeddings;
+ }
+
+ function normalizeVector(vector) {
+    const magnitude = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
+    return vector.map(val => val / magnitude);
+ }
+
+async function discoverNewConcepts(currentImageFeatures, sessionImages) {
+    const embeddings = await Promise.all(sessionImages.map(img => 
+        getImageFeatures(img.storage_url)
+    ));
+
+    return clusterEmbeddings(embeddings, currentImageFeatures);
+}
+
+function clusterEmbeddings(embeddings, currentFeatures, threshold = 0.75) {
+    const clusters = [];
+    let unusedEmbeddings = [...embeddings];
+
+    while (unusedEmbeddings.length > 0) {
+        const currentCluster = {
+            center: unusedEmbeddings[0],
+            images: [],
+            similarity: calculateSimilarity(unusedEmbeddings[0], currentFeatures)
+        };
+
+        // Add similar images to cluster
+        unusedEmbeddings = unusedEmbeddings.filter(embedding => {
+            if (calculateSimilarity(embedding, currentCluster.center) >= threshold) {
+                currentCluster.images.push(embedding);
+                return false;
+            }
+            return true;
+        });
+
+        if (currentCluster.similarity >= threshold) {
+            clusters.push(currentCluster);
+        }
+    }
+
+    return clusters;
+}
+
+export { getImageFeatures, calculateSimilarity, groupSimilarImages, getCategoriesForImage, getConceptualCategories, extractConceptsFromDescription };

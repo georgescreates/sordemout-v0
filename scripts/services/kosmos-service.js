@@ -53,12 +53,12 @@ async function getImageDescription(imageUrl) {
 
 async function pollPredictionStatus(predictionId) {
     const maxAttempts = 60;  // Increase to 2 minutes total
-    const interval = 2000;   // Check every 2 seconds
+    const interval = 6000;   // Check every 2 seconds
     let attempts = 0;
 
     while (attempts < maxAttempts) {
         try {
-            console.log(`\nPolling attempt ${attempts + 1}/${maxAttempts} for prediction ${predictionId}`);
+            // console.log(`\nPolling attempt ${attempts + 1}/${maxAttempts} for prediction ${predictionId}`);
             
             const response = await fetch(CORS_PROXY + `${REPLICATE_API_ENDPOINT}/${predictionId}`, {
                 headers: {
@@ -68,10 +68,10 @@ async function pollPredictionStatus(predictionId) {
             });
 
             const prediction = await response.json();
-            console.log('Current status:', prediction.status);
+            // console.log('Current status:', prediction.status);
             
             // Log full prediction for debugging
-            console.log('Full prediction response:', prediction);
+            // console.log('Full prediction response:', prediction);
 
             if (prediction.status === 'succeeded') {
                 console.log('Success! Output:', prediction.output);
@@ -83,13 +83,13 @@ async function pollPredictionStatus(predictionId) {
             }
 
             // More detailed status logging
-            if (prediction.status === 'processing') {
-                console.log('Still processing...');
-            } else if (prediction.status === 'starting') {
-                console.log('Still starting...');
-            } else {
-                console.log('Current status:', prediction.status);
-            }
+            // if (prediction.status === 'processing') {
+            //     console.log('Still processing...');
+            // } else if (prediction.status === 'starting') {
+            //     console.log('Still starting...');
+            // } else {
+            //     console.log('Current status:', prediction.status);
+            // }
 
             await new Promise(resolve => setTimeout(resolve, interval));
             attempts++;
@@ -274,10 +274,37 @@ function findRelatedConcepts(tag, descriptions) {
         }));
 }
 
+function processCategories(rawCategories) {
+    const alphaCategories = new Map(); // category -> count
+    const numericCategories = new Map();
+    const isOnlyDigits = str => /^\d+$/.test(str);
+    const isArticle = str => /^(a|an|the)$/i.test(str);
+    const cleanSpecialChars = str => str.replace(/[\[\]'"{}()]/g, '').trim();
+
+    rawCategories.forEach(category => {
+        let cleaned = cleanSpecialChars(category);
+        const parts = cleaned.split(/\s+/)
+            .filter(part => part.length > 0 && !isArticle(part))
+            .map(part => part.toLowerCase());
+
+        parts.forEach(part => {
+            if (isOnlyDigits(part)) {
+                numericCategories.set(part, (numericCategories.get(part) || 0) + 1);
+            } else {
+                alphaCategories.set(part, (alphaCategories.get(part) || 0) + 1);
+            }
+        });
+    });
+
+    // For now, return only sorted alpha categories
+    return Array.from(alphaCategories.keys()).sort();
+}
+
 export {
     analyzeSentence,
     extractDynamicCategories,
     generateTags,
     findRelatedConcepts,
-    getImageDescription
+    getImageDescription,
+    processCategories
 };

@@ -456,8 +456,8 @@ function createSessionElement(session) {
 }
 
 async function displaySessionFiles(sessionId) {
-    const sessionElement = document.querySelector(`[data-session-id="${sessionId}"]`);
-    const sessionBody = sessionElement.querySelector(".session-item-body");
+  const sessionElement = document.querySelector(`[data-session-id="${sessionId}"]`);
+  const sessionBody = sessionElement.querySelector(".session-item-body");
 
     const filesRef = collection(db, "sessions", sessionId, "files");
     const filesSnap = await getDocs(filesRef);
@@ -465,6 +465,10 @@ async function displaySessionFiles(sessionId) {
         id: doc.id,
         ...doc.data()
     }));
+
+    // Create category maps
+    const contextualMap = new Map();
+    const conceptualMap = new Map();
 
     let galleryContainer = sessionBody.querySelector(".session-item-galery-grid");
     if (!galleryContainer) {
@@ -514,32 +518,40 @@ async function displaySessionFiles(sessionId) {
         // Process categories from file data
         const categoryMap = new Map();
         fileData.forEach(file => {
-            if (file.categories) {
-                file.categories.forEach(category => {
-                    categoryMap.set(category, (categoryMap.get(category) || 0) + 1);
-                });
-            }
+            file.contextual_categories?.forEach(cat => {
+                contextualMap.set(cat, (contextualMap.get(cat) || 0) + 1);
+            });
+            file.conceptual_categories?.forEach(cat => {
+                conceptualMap.set(cat, (conceptualMap.get(cat) || 0) + 1);
+            });
         });
 
         filterControlsWrapper.innerHTML = `
-            <h5 class="font-medium">Filters :</h5>
-            <div class="session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
-                ${Array.from(categoryMap)
-                    .map(
-                    ([category, count]) => `
-                    <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
-                        <div class="flex items-center gap-x-2 h-full">
-                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
-                            <label class="text-sm text-gray-700">${category}</label>
-                        </div>
-                        <div class="flex items-center">
-                            <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
-                        </div>
-                    </div>
-                `
-                    )
-                    .join("")}
-            </div>
+            <h5 class="font-medium">Filters:</h5>
+            <div class="w-full flex flex-col gap-y-2">
+              <div class="flex gap-x-2 overflow-x-auto">
+                  ${Array.from(contextualMap).map(([cat, count]) => `
+                      <div class="filter-container border border-silver-chalice-200 py-1.5 px-3 rounded">
+                          <div class="flex items-center gap-x-2">
+                              <input type="checkbox" class="h-4 w-4 rounded">
+                              <label class="text-sm text-gray-700">${cat}</label>
+                              <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                          </div>
+                      </div>
+                  `).join('')}
+              </div>
+              <div class="flex gap-x-2 overflow-x-auto">
+                  ${Array.from(conceptualMap).map(([cat, count]) => `
+                      <div class="filter-container border border-silver-chalice-200 py-1.5 px-3 rounded bg-lochmara-50">
+                          <div class="flex items-center gap-x-2">
+                              <input type="checkbox" class="h-4 w-4 rounded">
+                              <label class="text-sm text-gray-700">${cat}</label>
+                              <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                          </div>
+                      </div>
+                  `).join('')}
+              </div>
+          </div>
         `;
 
         controlsWrapper.appendChild(thresholdControlsWrapper);
@@ -620,6 +632,44 @@ async function displaySessionFiles(sessionId) {
 
         galleryContainer.appendChild(fileElement);
     });
+
+    const filterElements = document.querySelectorAll('.filter-container');
+    handleCategoryFilter(sessionId, filterElements);
+}
+
+function handleCategoryFilter(sessionId, categoryElements) {
+  const checkedCategories = new Set();
+  
+  categoryElements.forEach(element => {
+      const checkbox = element.querySelector('input[type="checkbox"]');
+      const label = element.querySelector('label').textContent;
+      
+      checkbox.addEventListener('change', async () => {
+          if (checkbox.checked) {
+              checkedCategories.add(label);
+          } else {
+              checkedCategories.delete(label);
+          }
+          await filterSessionFiles(sessionId, checkedCategories);
+      });
+  });
+}
+
+async function filterSessionFiles(sessionId, selectedCategories) {
+  const filesRef = collection(db, "sessions", sessionId, "files");
+  const filesSnap = await getDocs(filesRef);
+  const galleryContainer = document.querySelector('.session-item-galery-grid');
+
+  filesSnap.docs.forEach(doc => {
+      const fileData = doc.data();
+      const fileElement = galleryContainer.querySelector(`[data-file-id="${doc.id}"]`);
+      
+      const hasSelectedCategory = selectedCategories.size === 0 || 
+          fileData.contextual_categories?.some(cat => selectedCategories.has(cat)) ||
+          fileData.conceptual_categories?.some(cat => selectedCategories.has(cat));
+
+      fileElement.style.display = hasSelectedCategory ? 'block' : 'none';
+  });
 }
 
 function getSelectedFilters(wrapper) {
@@ -662,7 +712,7 @@ function showError(message) {
     "fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-froly-600 text-white px-4 py-2 rounded shadow-lg";
   errorToast.textContent = message;
   document.body.appendChild(errorToast);
-  setTimeout(() => errorToast.remove(), 3000);
+  setTimeout(() => errorToast.remove(), 6000);
 }
 
 function showSuccessToast(message) {
@@ -671,7 +721,7 @@ function showSuccessToast(message) {
     "fixed bottom-20 left-1/2 transform -translate-x-1/2 bg-puerto-rico-500 text-white px-4 py-2 rounded shadow-lg";
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => toast.remove(), 6000);
 }
 
 function getStatusLabel(session) {

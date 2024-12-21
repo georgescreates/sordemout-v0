@@ -1,12 +1,16 @@
 import { db, storage } from '../firebase-config.js';
 import { canAddFiles, createSession, getSessionData, SESSION_TIERS } from './session.js';
-import { getImageFeatures } from './clip-service.js';
-import { getImageDescription, extractDynamicCategories, generateTags } from './kosmos-service.js';
+import { getImageFeatures, getConceptualCategories, extractConceptsFromDescription } from './clip-service.js';
+import { getImageDescription, extractDynamicCategories, generateTags, processCategories } from './kosmos-service.js';
 import { ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 // import { getDoc, getDocs, doc, updateDoc, deleteDoc, increment } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 import { getDoc, getDocs, doc, collection, addDoc, serverTimestamp, increment, writeBatch, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 let sessionDescriptions = [];
+
+function flattenIfArray(value) {
+    return Array.isArray(value) ? value.flat().filter(v => v !== null && v !== undefined) : value;
+}
 
 // Upload a single file to Firebase Storage
 async function uploadFileToStorage(file, progressCallback, sessionId) {
@@ -51,62 +55,47 @@ async function uploadFileToStorage(file, progressCallback, sessionId) {
             try {
                 const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
                 
+                // Get existing session images
+                const sessionFilesSnap = await getDocs(collection(db, "sessions", sessionId, "files"));
                 updateProcessingToast(toast, 'Analyzing image content...');
+
                 const description = await getImageDescription(downloadURL);
-                const categories = extractDynamicCategories([description]);
+                const contextualCategories = processCategories(generateTags(description));
+                const conceptualCategories = extractConceptsFromDescription(description);
  
                 await addDoc(collection(db, "sessions", sessionId, "files"), {
                     storage_url: downloadURL,
                     name: file.name,
                     size: file.size,
                     upload_time: serverTimestamp(),
-                    categories: Object.values(categories)
-                        .flat()
-                        .map(c => c.term)
-                        .filter(c => c.confidence > 0.5),
+                    contextual_categories: flattenIfArray(contextualCategories) || [],
+                    conceptual_categories: conceptualCategories,
+                    description: description,
                     processed: true
                 });
-
+ 
                 // Check cooldown trigger
                 const sessionRef = doc(db, "sessions", sessionId);
                 const sessionSnap = await getDoc(sessionRef);
                 const session = sessionSnap.data();
-
-                const currentTier = session.tier.current;
-                const tierLimits = SESSION_TIERS[session.type][currentTier];
-                const newFileCount = session.usage.files_count + 1;
-                const newTotalSize = session.usage.total_size + file.size;
-
-                // Update session with usage and cooldown if needed
+ 
                 const updates = {
                     "usage.files_count": increment(1),
                     "usage.total_size": increment(file.size)
                 };
-
-                // Add preview image logic
+ 
                 if (!session.preview_image || file.size < session.preview_image_size) {
                     updates.preview_image = downloadURL;
                     updates.preview_image_size = file.size;
                 }
-
-                if ((newFileCount >= tierLimits.max_files || newTotalSize >= tierLimits.max_size) && currentTier < 3) {
-                    const now = Date.now();
-                    const nextTier = SESSION_TIERS[session.type][currentTier + 1];
-                    
-                    updates["tier.cooldowns_used"] = increment(1);
-                    updates["tier.current_cooldown_ends_at"] = new Date(now + nextTier.cooldown_duration);
-                    updates["tier.last_cooldown_at"] = new Date(now);
-                }
-
+ 
                 await updateDoc(sessionRef, updates);
  
                 hideProcessingToast(toast);
                 progressCallback({
                     status: 'complete',
                     progress: 100,
-                    downloadURL,
-                    triggeredCooldown: newFileCount >= tierLimits.max_files || newTotalSize >= tierLimits.max_size,
-                    nextTier: currentTier < 3 ? SESSION_TIERS[session.type][currentTier + 1] : null
+                    downloadURL
                 });
  
             } catch (error) {
