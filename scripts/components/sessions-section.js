@@ -510,7 +510,7 @@ async function displaySessionFiles(sessionId) {
         `;
 
         const filterControlsWrapper = document.createElement("div");
-        filterControlsWrapper.className = "w-[70%] h-full flex gap-x-4 items-center whitespace-nowrap";
+        filterControlsWrapper.className = "session-item-controls-filters-wrapper w-[70%] h-full flex gap-x-4 items-center whitespace-nowrap";
 
         const filtersContainer = document.createElement('div');
         filtersContainer.className = "session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden";
@@ -527,7 +527,10 @@ async function displaySessionFiles(sessionId) {
         });
 
         filterControlsWrapper.innerHTML = `
-            <h5 class="font-medium">Filters:</h5>
+            <h5 class="font-medium">
+              Filters: 
+              <span class="text-sm text-silver-chalice-400">(${contextual_categories.length + conceptual_categories.length})</span>
+            </h5>
             <div class="w-full flex flex-col gap-y-2">
               <div class="flex gap-x-2 overflow-x-auto">
                   ${Array.from(contextualMap).map(([cat, count]) => `
