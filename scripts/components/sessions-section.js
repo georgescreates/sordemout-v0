@@ -466,10 +466,6 @@ async function displaySessionFiles(sessionId) {
         ...doc.data()
     }));
 
-    // Create category maps
-    const contextualMap = new Map();
-    const conceptualMap = new Map();
-
     let galleryContainer = sessionBody.querySelector(".session-item-galery-grid");
     if (!galleryContainer) {
         galleryContainer = document.createElement("div");
@@ -515,46 +511,57 @@ async function displaySessionFiles(sessionId) {
         const filtersContainer = document.createElement('div');
         filtersContainer.className = "session-filters flex gap-x-2 overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden";
 
+        // Create category maps
+        const contextualMap = new Map();
+        const conceptualMap = new Map();
+
         // Process categories from file data
-        const categoryMap = new Map();
         fileData.forEach(file => {
             file.contextual_categories?.forEach(cat => {
                 contextualMap.set(cat, (contextualMap.get(cat) || 0) + 1);
             });
+            
             file.conceptual_categories?.forEach(cat => {
                 conceptualMap.set(cat, (conceptualMap.get(cat) || 0) + 1);
             });
         });
 
+        const totalCategories = contextualMap.size + conceptualMap.size;
+
         filterControlsWrapper.innerHTML = `
             <h5 class="font-medium">
-              Filters: 
-              <span class="text-sm text-silver-chalice-400">(${contextual_categories.length + conceptual_categories.length})</span>
+                Filters:
+                <span class="text-sm text-silver-chalice-400">(${totalCategories})</span>
             </h5>
-            <div class="w-full flex flex-col gap-y-2">
-              <div class="flex gap-x-2 overflow-x-auto">
-                  ${Array.from(contextualMap).map(([cat, count]) => `
-                      <div class="filter-container border border-silver-chalice-200 py-1.5 px-3 rounded">
-                          <div class="flex items-center gap-x-2">
-                              <input type="checkbox" class="h-4 w-4 rounded">
-                              <label class="text-sm text-gray-700">${cat}</label>
-                              <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+
+            <div class="session-filters flex gap-x-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                  <div class="flex gap-x-2 overflow-x-auto">
+                      ${Array.from(contextualMap).map(([cat, count]) => `
+                          <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                              <div class="flex items-center gap-x-2 h-full">
+                                  <input type="checkbox" id="" class="h-4 w-4 rounded">
+                                  <label class="text-sm text-gray-700">${cat}</label>
+                              </div>
+                              <div class="flex items-center">
+                                  <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                              </div>
                           </div>
-                      </div>
-                  `).join('')}
-              </div>
-              <div class="flex gap-x-2 overflow-x-auto">
-                  ${Array.from(conceptualMap).map(([cat, count]) => `
-                      <div class="filter-container border border-silver-chalice-200 py-1.5 px-3 rounded bg-lochmara-50">
-                          <div class="flex items-center gap-x-2">
-                              <input type="checkbox" class="h-4 w-4 rounded">
-                              <label class="text-sm text-gray-700">${cat}</label>
-                              <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                      `).join('')}
+                  </div>
+                  <div class="flex gap-x-2 overflow-x-auto">
+                      ${Array.from(conceptualMap).map(([cat, count]) => `
+                          <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
+                              <div class="flex items-center gap-x-2 h-full">
+                                  <input type="checkbox" id="" checkedclass="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500">
+                                  <label class="text-sm text-gray-700">${cat}</label>
+                              </div>
+                              <div class="flex items-center">
+                                  <small class="text-[0.7rem] text-silver-chalice-500">${count}</small>
+                              </div>
                           </div>
-                      </div>
-                  `).join('')}
+                      `).join('')}
+                  </div>
               </div>
-          </div>
         `;
 
         controlsWrapper.appendChild(thresholdControlsWrapper);

@@ -1822,8 +1822,16 @@ body {
   -ms-overflow-style: 'none';
 }
 
+.\[-ms-overflow-style\:none\] {
+  -ms-overflow-style: none;
+}
+
 .\[scrollbar-width\:\'none\'\] {
   scrollbar-width: 'none';
+}
+
+.\[scrollbar-width\:none\] {
+  scrollbar-width: none;
 }
 
 .after\:absolute::after {
