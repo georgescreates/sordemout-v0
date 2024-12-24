@@ -534,7 +534,7 @@ async function displaySessionFiles(sessionId) {
                 <span class="text-sm text-silver-chalice-400">(${totalCategories})</span>
             </h5>
 
-            <div class="session-filters flex gap-x-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div class="session-filters flex gap-x-2 overflow-x-auto [&::-webkit-scrollbar]:none [-ms-overflow-style:none] [scrollbar-width:none]">
                   <div class="flex gap-x-2 overflow-x-auto">
                       ${Array.from(contextualMap).map(([cat, count]) => `
                           <div class="session-filter-container cursor-pointer flex items-center gap-x-3 select-none border border-silver-chalice-200 py-1.5 px-3 rounded">
